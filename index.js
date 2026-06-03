@@ -1,16 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const app = express();
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
+const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 
-// মঙ্গোডিবি ইউরিআই (URI)
+// MongoDB URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -23,105 +23,120 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // ডেটাবেজ কানেক্ট করা
     await client.connect();
+    console.log("Successfully connected to MongoDB!");
 
     const db = client.db('amar_union_db');
     
-    // কালেকশন সমূহ
-    const TradelicenseCollection = db.collection('license');
-    const PremisesCollection = db.collection('premises');
+    // সব কালেকশন
     const WarishCollection = db.collection('warish');
-    const FamilyCollection = db.collection('family_certificates'); // 💡 পারিবারিক সনদের জন্য আলাদা কালেকশন
+    const PowerOfAttorneyCollection = db.collection('power_of_attorney');
+    const DeathCertificateCollection = db.collection('death_certificates');
+    const LandlessCertificateCollection = db.collection('landless_certificates');
+    const TradeLicenseCollection = db.collection('trade_licenses');   // নতুন
 
-    // ==========================================
-    // ১. ট্রেড লাইসেন্স সাবমিট এপিআই
-    // ==========================================
-    app.post('/license', async (req, res) => {
-      try {
-        const license = req.body;
-        const finalLicenseData = {
-          ...license,
-          applicationId: 'TRD' + Math.floor(100000 + Math.random() * 900000),
-          status: 'Pending',
-          submittedAt: new Date()
-        };
-        const result = await TradelicenseCollection.insertOne(finalLicenseData);
-        res.status(201).send({ success: true, result, applicationId: finalLicenseData.applicationId });
-      } catch (error) {
-        res.status(500).send({ success: false, message: "Database insertion failed", error });
-      }
-    });
-
-    // ==========================================
-    // ২. প্রাঙ্গণ লাইসেন্স সাবমিট এপিআই
-    // ==========================================
-    app.post('/premises', async (req, res) => {
-      try {
-        const premisesData = req.body;
-        const finalPremisesData = {
-          ...premisesData,
-          premisesId: 'PRM' + Math.floor(100000 + Math.random() * 900000),
-          status: 'Pending',
-          submittedAt: new Date()
-        };
-        const result = await PremisesCollection.insertOne(finalPremisesData);
-        res.status(201).send({ success: true, result, premisesId: finalPremisesData.premisesId });
-      } catch (error) {
-        res.status(500).send({ success: false, message: "Database insertion failed", error });
-      }
-    });
-
-    // ==========================================
-    // ৩. ওয়ারিশ সনদপত্র সাবমিট এপিআই
-    // ==========================================
-    app.post('/warish', async (req, res) => {
+    // ==================== 1. ওয়ারিশ সনদ ====================
+    app.post('/api/warish', async (req, res) => {
       try {
         const warishData = req.body;
-        const finalWarishData = {
+        const finalData = {
           ...warishData,
           warishId: 'WRS' + Math.floor(100000 + Math.random() * 900000),
           status: 'Pending',
           submittedAt: new Date()
         };
-        const result = await WarishCollection.insertOne(finalWarishData);
-        res.status(201).send({ success: true, result, warishId: finalWarishData.warishId });
+        const result = await WarishCollection.insertOne(finalData);
+        res.status(201).send({ success: true, result, warishId: finalData.warishId });
       } catch (error) {
-        console.error("Warish error:", error);
-        res.status(500).send({ success: false, message: "Database insertion failed", error });
+        res.status(500).send({ success: false, message: error.message });
       }
     });
 
-    // ==========================================
-    // ৪. পারিবারিক সনদপত্র সাবমিট এপিআই (নতুন যুক্ত)
-    // ==========================================
-    app.post('/family-certificate', async (req, res) => {
+    // ==================== 2. পাওয়ার অফ অ্যাটর্নি ====================
+    app.post('/api/power-of-attorney', async (req, res) => {
       try {
-        const familyData = req.body;
-        
-        // ইউনিক আইডি জেনারেট ও মেটাডেটা সংযুক্তি
-        const finalFamilyData = {
-          ...familyData,
-          familyCertificateId: 'FAM' + Math.floor(100000 + Math.random() * 900000),
+        const poaData = req.body;
+        const finalData = {
+          ...poaData,
+          poaId: 'POA' + Math.floor(100000 + Math.random() * 900000),
+          status: 'Pending',
+          submittedAt: new Date()
+        };
+        const result = await PowerOfAttorneyCollection.insertOne(finalData);
+        res.status(201).send({ success: true, result, poaId: finalData.poaId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // ==================== 3. মৃত্যু সনদ ====================
+    app.post('/api/death-certificate', async (req, res) => {
+      try {
+        const deathData = req.body;
+        const finalData = {
+          ...deathData,
+          deathCertId: 'DTH' + Math.floor(100000 + Math.random() * 900000),
+          status: 'Pending',
+          submittedAt: new Date()
+        };
+        const result = await DeathCertificateCollection.insertOne(finalData);
+        res.status(201).send({ success: true, result, deathCertId: finalData.deathCertId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // ==================== 4. ভূমিহীন সনদ ====================
+    app.post('/api/landless-certificate', async (req, res) => {
+      try {
+        const landlessData = req.body;
+        const finalData = {
+          ...landlessData,
+          landlessId: 'LND' + Math.floor(100000 + Math.random() * 900000),
+          status: 'Pending',
+          submittedAt: new Date()
+        };
+        const result = await LandlessCertificateCollection.insertOne(finalData);
+        res.status(201).send({ success: true, result, landlessId: finalData.landlessId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // ==================== 5. ট্রেড লাইসেন্স (নতুন) ====================
+    app.post('/license', async (req, res) => {
+      try {
+        const licenseData = req.body;
+        console.log("Trade License Data:", licenseData);
+
+        // ইউনিক আইডি ও মেটাডেটা যোগ
+        const finalData = {
+          ...licenseData,
+          applicationId: 'TL' + Math.floor(100000 + Math.random() * 900000), // frontend এ applicationId চাচ্ছে
           status: 'Pending',
           submittedAt: new Date()
         };
 
-        const result = await FamilyCollection.insertOne(finalFamilyData);
-        res.status(201).send({ 
-          success: true, 
-          result, 
-          familyCertificateId: finalFamilyData.familyCertificateId 
+        const result = await TradeLicenseCollection.insertOne(finalData);
+        
+        res.status(201).send({
+          success: true,
+          result,
+          applicationId: finalData.applicationId   // frontend এটা দেখবে
         });
       } catch (error) {
-        console.error("Family certificate application error:", error);
-        res.status(500).send({ success: false, message: "Database insertion failed", error });
+        console.error("Trade License insertion error:", error);
+        res.status(500).send({
+          success: false,
+          message: "Database insertion failed",
+          error: error.message
+        });
       }
     });
 
-    // সফল কানেকশন চেক করার জন্য পিং কমান্ড
+    // পিং টেস্ট
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Successfully connected to MongoDB & all endpoints ready!");
 
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
@@ -130,10 +145,11 @@ async function run() {
 
 run().catch(console.dir);
 
+// রুট রাউট
 app.get('/', (req, res) => {
   res.send('Amar Union Server is Running');
 });
 
 app.listen(port, () => {
-  console.log(`Amar Union Server listening on port ${port}`);
+  console.log(`Server listening on port ${port}`);
 });

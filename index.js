@@ -60,14 +60,26 @@ async function run() {
     });
 
     // ------------------- ২. ওয়ারিশ সনদ -------------------
-    app.post('/api/warish', async (req, res) => {
-      try {
-        const data = req.body;
-        const finalData = { ...data, warishId: 'WRS' + Date.now(), status: 'Pending', submittedAt: new Date() };
-        const result = await WarishCollection.insertOne(finalData);
-        res.status(201).send({ success: true, result, warishId: finalData.warishId });
-      } catch (error) { res.status(500).send({ success: false, message: error.message }); }
-    });
+// ------------------- ২. ওয়ারিশ সনদ -------------------
+app.post('/api/warish', async (req, res) => {
+  try {
+    const data = req.body;
+    
+    // ফ্রন্টএন্ড থেকে আসা applicantInfo এর ইমেইলটি রুট লেভেলে 'email' নামে সেট করা হচ্ছে
+    const finalData = { 
+      ...data, 
+      email: data.email || data.applicantInfo?.applicantEmail, // সেফটি চেক
+      warishId: 'WRS' + Date.now(), 
+      status: 'Pending', 
+      submittedAt: new Date() 
+    };
+    
+    const result = await WarishCollection.insertOne(finalData);
+    res.status(201).send({ success: true, result, warishId: finalData.warishId });
+  } catch (error) { 
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
 
     // ------------------- ৩. নাগরিকত্ব সনদ -------------------
     app.post('/api/citizenship-certificate', async (req, res) => {
@@ -119,6 +131,9 @@ async function run() {
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
 
+
+
+
     // ------------------- ৮. ট্রেড লাইসেন্স -------------------
     app.post('/api/trade-license', async (req, res) => {
       try {
@@ -128,6 +143,8 @@ async function run() {
         res.status(201).send({ success: true, result, applicationId: finalData.applicationId });
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
+
+
 
     // ------------------- ৯. প্রাঙ্গণ লাইসেন্স -------------------
     app.post('/api/premises', async (req, res) => {

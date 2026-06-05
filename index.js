@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
-
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');  // 👈 এটি যোগ করুন
+const JWT_SECRET = process.env.JWT_SECRET || 'amar_union_secret_2025';
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -27,6 +29,9 @@ async function run() {
     const LandlessCertificateCollection = db.collection('landless_certificates');
     const TradeLicenseCollection = db.collection('trade_licenses');
     const PremisesCollection = db.collection('premises');
+    const AdminCollection = db.collection('admin_users');
+
+
 
     // ------------------- ইউজারের সব আবেদন -------------------
     app.get('/api/my-applications/:email', async (req, res) => {
@@ -43,6 +48,7 @@ async function run() {
           ...(await LandlessCertificateCollection.find(query).toArray()).map(a => ({ id: a.landlessId, type: 'ভূমিহীন সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await TradeLicenseCollection.find(query).toArray()).map(a => ({ id: a.applicationId, type: 'ট্রেড লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await PremisesCollection.find(query).toArray()).map(a => ({ id: a.premisesId, type: 'প্রাঙ্গণ লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' }))
+
         ];
         allApps.sort((a, b) => new Date(b.date) - new Date(a.date));
         res.send(allApps);
@@ -130,6 +136,32 @@ app.post('/api/warish', async (req, res) => {
         res.status(201).send({ success: true, result, landlessId: finalData.landlessId });
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
+
+
+app.post('/api/admin/login', async (req, res) => {
+  const { email, password } = req.body;
+  console.log('Login attempt email:', email);
+  
+  const admin = await AdminCollection.findOne({ email });
+  console.log('Found admin:', admin);
+  
+  if (!admin) return res.status(401).json({ message: 'ইমেইল বা পাসওয়ার্ড ভুল' });
+  
+  const isMatch = await bcrypt.compare(password, admin.password);
+  console.log('Password match:', isMatch);
+  
+  if (!isMatch) return res.status(401).json({ message: 'ইমেইল বা পাসওয়ার্ড ভুল' });
+  
+  const token = jwt.sign(
+    { id: admin._id, email: admin.email, role: admin.role },
+    JWT_SECRET,
+    { expiresIn: '1d' }
+  );
+  
+  res.json({ token, admin: { id: admin._id, email: admin.email, role: admin.role } });
+});
+
+
 
 
 

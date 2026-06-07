@@ -39,11 +39,15 @@ async function run() {
     const PremisesCollection = db.collection('premises');
     const AdminCollection = db.collection('admin_users');
     const GlanceCollection = db.collection('glance');
+    const StructureCollection = db.collection('structure');
     
-    // 🔥 ডায়নামিক হোম পেজ ও পরিচিতির জন্য নতুন ৩টি কালেকশন (Pure MongoDB)
+    // 🔥 ডায়নামিক হোম পেজ ও পরিচিতির জন্য নতুন কালেকশন সমূহ
     const NoticeCollection = db.collection('notices');
     const ServiceCollection = db.collection('services');
     const IntroCollection = db.collection('intro');
+    const ChairmanCollection = db.collection('chairman');
+    const ExChairmanCollection = db.collection('ex_chairmans'); // 🌟 সাবেক চেয়ারম্যান কালেকশন
+    const CouncillorCollection = db.collection('councillors'); // 🌟 কাউন্সিলর কালেকশন
 
     // ------------------- ইউজারের সব আবেদন -------------------
     app.get('/api/my-applications/:email', async (req, res) => {
@@ -53,7 +57,7 @@ async function run() {
         const allApps = [
           ...(await FamilyCertificateCollection.find(query).toArray()).map(a => ({ id: a.familyCertificateId, type: 'পারিবারিক সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await WarishCollection.find(query).toArray()).map(a => ({ id: a.warishId, type: 'ওয়ারিশ সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
-          ...(await CitizenshipCollection.find(query).toArray()).map(a => ({ id: a.citizenshipId, type: 'ناগরিকত্ব সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+          ...(await CitizenshipCollection.find(query).toArray()).map(a => ({ id: a.citizenshipId, type: 'নাগরিকত্ব সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await SuccessorCollection.find(query).toArray()).map(a => ({ id: a.successorId, type: 'উত্তরাধিকারী সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await PowerOfAttorneyCollection.find(query).toArray()).map(a => ({ id: a.poaId, type: 'পাওয়ার অফ অ্যাটর্নি', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await DeathCertificateCollection.find(query).toArray()).map(a => ({ id: a.deathCertId, type: 'মৃত্যু সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
@@ -66,7 +70,7 @@ async function run() {
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
 
-    // 🔹 সমস্ত আবেদন পাওয়ার জন্য (প্রশাসক)
+    // 🔹 সমস্ত আবেদন পাওয়ার জন্য (প্ররাসক)
     app.get('/api/admin/applications', async (req, res) => {
       try {
         const collections = [
@@ -199,7 +203,7 @@ async function run() {
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
 
-    // ------------------- ৭. 𑁪ূমিহীন সনদ -------------------
+    // ------------------- ৭. ভূমিহীন সনদ -------------------
     app.post('/api/landless-certificate', async (req, res) => {
       try {
         const data = req.body;
@@ -248,7 +252,7 @@ async function run() {
 
 
     // =========================================================
-    // 🔥 নতুন ৩টি এপিআই (ড্যাশবোর্ড আপডেটের জন্য - Pure MongoDB Driver)
+    // 🔥 ড্যাশবোর্ড আপডেটের জন্য এপিআই সমূহ (Pure MongoDB Driver)
     // =========================================================
 
     // ১. নোটিশ তৈরি করার API
@@ -287,7 +291,6 @@ async function run() {
           landmarks: landmarks ? landmarks.split(',').map(item => item.trim()) : []
         };
 
-        // ডাটাবেজে একটিও ডাটা থাকলে আপডেট হবে, না থাকলে প্রথমবার ইনসার্ট হবে (Upsert লজিক)
         await IntroCollection.updateOne(
           {}, 
           { $set: updatedData }, 
@@ -298,7 +301,7 @@ async function run() {
       } catch (error) { res.status(500).json({ message: error.message }); }
     });
 
-    // ৪. পরিচিতি ডাটা ফ্রন্টএন্ডে গেট (GET) করার API (যাতে Intro পেজে শো করে)
+    // ৪. পরিচিতি ডাটা ফ্রন্টএন্ডে গেট (GET) করার API
     app.get('/api/intro', async (req, res) => {
       try {
         const result = await IntroCollection.findOne({});
@@ -306,43 +309,173 @@ async function run() {
       } catch (error) { res.status(500).json({ message: error.message }); }
     });
 
-    // ১. ড্যাশবোর্ড থেকে Glance ডাটা সেভ বা আপডেট করার API (Upsert)
-app.post('/api/glance', async (req, res) => {
-  try {
-    const { 
-      totalPopulation, totalVoters, area, literacyRate, 
-      totalVillages, primarySchools, healthCenters, established 
-    } = req.body;
+    // ৫. Glance ডাটা সেভ বা আপডেট করার API (Upsert)
+    app.post('/api/glance', async (req, res) => {
+      try {
+        const { 
+          totalPopulation, totalVoters, area, literacyRate, 
+          totalVillages, primarySchools, healthCenters, established 
+        } = req.body;
 
-    const glanceData = {
-      totalPopulation,
-      totalVoters,
-      area,
-      literacyRate,
-      totalVillages,
-      primarySchools,
-      healthCenters,
-      established,
-      updatedAt: new Date()
-    };
+        const glanceData = {
+          totalPopulation, totalVoters, area, literacyRate,
+          totalVillages, primarySchools, healthCenters, established,
+          updatedAt: new Date()
+        };
 
-    // ডাটাবেজে ডাটা থাকলে আপডেট হবে, না থাকলে নতুন তৈরি হবে
-    await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
-    res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+        await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
+        res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
 
-// ২. ফ্রন্টঅ্যান্ডে Glance ডাটা দেখানোর API (GET)
-app.get('/api/glance', async (req, res) => {
-  try {
-    const result = await GlanceCollection.findOne({});
-    res.send(result || {});
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+    // ৬. Glance ডাটা দেখানোর API (GET)
+    app.get('/api/glance', async (req, res) => {
+      try {
+        const result = await GlanceCollection.findOne({});
+        res.send(result || {});
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
+
+    // ৭. সাংগঠনিক কাঠামোর তথ্য সেভ বা আপডেট করার API (Upsert)
+    app.post('/api/structure', async (req, res) => {
+      try {
+        const { topManagement, members } = req.body;
+        const structureData = { topManagement, members, updatedAt: new Date() };
+
+        await StructureCollection.updateOne({}, { $set: structureData }, { upsert: true });
+        res.status(200).json({ message: 'সাংগঠনিক কাঠামোর তথ্য সফলভাবে আপডেট হয়েছে!' });
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
+
+    // ৮. সাংগঠনিক কাঠামোর তথ্য দেখানোর API (GET)
+    app.get('/api/structure', async (req, res) => {
+      try {
+        const result = await StructureCollection.findOne({});
+        res.send(result || {});
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
+
+    // ৯. চেয়ারম্যানের প্রোফাইল আপডেট করার API (Upsert)
+    app.post('/api/chairman', async (req, res) => {
+      try {
+        const chairmanData = req.body;
+        chairmanData.updatedAt = new Date();
+
+        await ChairmanCollection.updateOne({}, { $set: chairmanData }, { upsert: true });
+        res.status(200).json({ message: 'চেয়ারম্যান প্রোফাইল সফলভাবে আপডেট হয়েছে!' });
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
+
+    // ১০. চেয়ারম্যানের ডাটা দেখানোর API (GET)
+    app.get('/api/chairman', async (req, res) => {
+      try {
+        const result = await ChairmanCollection.findOne({});
+        res.send(result || {});
+      } catch (error) { res.status(500).json({ message: error.message }); }
+    });
+
+
+    // =========================================================================
+    // 🌟 সাবেক চেয়ারম্যান (EX-CHAIRMANS) পিওর মঙ্গোডিবি রাউটস (১০০% আপনার কোডের প্যাটার্নে)
+    // =========================================================================
+
+    // 🟢 (ক) সব সাবেক চেয়ারম্যানদের তালিকা রিড করা (GET)
+    app.get('/api/ex-chairmans', async (req, res) => {
+      try {
+        const chairmans = await ExChairmanCollection.find({}).toArray();
+        res.status(200).json({ success: true, chairmans });
+      } catch (error) {
+        res.status(500).json({ success: false, message: 'সাবেক চেয়ারম্যান তালিকা আনতে ব্যর্থ!', error: error.message });
+      }
+    });
+
+    // 🔵 (খ) ড্যাশবোর্ড থেকে পুরো তালিকা একবারে সেভ/সিঙ্ক করা (POST)
+    app.post('/api/ex-chairmans', async (req, res) => {
+      try {
+        const { chairmans } = req.body;
+
+        if (!chairmans || !Array.isArray(chairmans)) {
+          return res.status(400).json({ success: false, message: 'সদস্য ডাটা ফরম্যাট সঠিক প্রদান করুন।' });
+        }
+
+        await ExChairmanCollection.deleteMany({});
+        
+        const cleanedChairmans = chairmans.map(item => ({
+          name: item.name,
+          title: item.title || 'সাবেক চেয়ারম্যান',
+          duration: item.duration,
+          image: item.image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb',
+          status: item.status || 'জীবিত',
+          village: item.village || '',
+          submittedAt: new Date()
+        }));
+        
+        if (cleanedChairmans.length > 0) {
+          await ExChairmanCollection.insertMany(cleanedChairmans);
+        }
+
+        res.status(200).json({ 
+          success: true, 
+          message: 'পূর্বতন চেয়ারম্যান তালিকা সফলভাবে আপডেট হয়েছে!'
+        });
+      } catch (error) {
+        res.status(500).json({ success: false, message: 'ডাটাবেজে সংরক্ষণ করতে সমস্যা হয়েছে!', error: error.message });
+      }
+    });
+
+
+    // =========================================================================
+    // 🌟 ইউপি সদস্য / কাউন্সিলর (COUNCILLORS) পিওর মঙ্গোডিবি রাউটস
+    // =========================================================================
+
+    // 🟢 (ক) সব কাউন্সিলরদের তালিকা রিড করা (GET)
+    app.get('/api/councillors', async (req, res) => {
+      try {
+        const councillors = await CouncillorCollection.find({}).toArray();
+        res.status(200).json({ success: true, councillors });
+      } catch (error) {
+        res.status(500).json({ success: false, message: 'কাউন্সিলর তালিকা আনতে ব্যর্থ!', error: error.message });
+      }
+    });
+
+    // 🔵 (খ) ড্যাশবোর্ড থেকে পুরো তালিকা একবারে সেভ/সিঙ্ক করা (POST)
+    app.post('/api/councillors', async (req, res) => {
+      try {
+        const { councillors } = req.body;
+
+        if (!councillors || !Array.isArray(councillors)) {
+          return res.status(400).json({ success: false, message: 'সঠিক ডেটা ফরম্যাট প্রদান করুন।' });
+        }
+
+        // ১. আগের সব ডাটা ডিলিট করা
+        await CouncillorCollection.deleteMany({});
+        
+        // ২. ডাটা ক্লিন করা
+        const cleanedCouncillors = councillors.map(item => ({
+          name: item.name,
+          role: item.role || 'ইউপি সদস্য / কাউন্সিলর',
+          ward: item.ward,
+          image: item.image || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
+          phone: item.phone,
+          email: item.email,
+          submittedAt: new Date()
+        }));
+        
+        // ৩. ডাটাবেজে ইনসার্ট করা
+        if (cleanedCouncillors.length > 0) {
+          await CouncillorCollection.insertMany(cleanedCouncillors);
+        }
+
+        res.status(200).json({ 
+          success: true, 
+          message: 'কাউন্সিলর/সদস্য তালিকা সফলভাবে আপডেট হয়েছে!'
+        });
+      } catch (error) {
+        res.status(500).json({ success: false, message: 'ডাটাবেজে সংরক্ষণ করতে সমস্যা হয়েছে!', error: error.message });
+      }
+    });
+
+    // =========================================================================
 
     console.log("MongoDB Connected & All Routes Ready Successfully!");
   } catch (error) { console.error(error); }

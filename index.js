@@ -49,6 +49,13 @@ async function run() {
     const ExChairmanCollection = db.collection('ex_chairmans'); // 🌟 সাবেক চেয়ারম্যান কালেকশন
     const CouncillorCollection = db.collection('councillors'); // 🌟 কাউন্সিলর কালেকশন
     const SecretaryCollection = db.collection('secretary'); // 🌟 নতুন যোগ করা হলো: সচিব কালেকশন
+    const ContactInfoCollection = db.collection('contact_info');
+    const VerificationPageCollection = db.collection('verification_page');
+    const GalleryCollection = db.collection('gallery_items');
+const UpdatesCollection = db.collection('updates');
+
+
+
 
     // ------------------- ইউজারের সব আবেদন -------------------
     app.get('/api/my-applications/:email', async (req, res) => {
@@ -501,6 +508,222 @@ app.post('/api/secretary', async (req, res) => {
   }
 });
 
+
+// GET: কন্টাক্ট তথ্য পড়ুন (একটি ডকুমেন্ট)
+app.get('/api/contact-info', async (req, res) => {
+  try {
+    const result = await ContactInfoCollection.findOne({});
+    res.send(result || {});
+  } catch (error) {
+    res.status(500).json({ message: 'কন্টাক্ট তথ্য আনতে ব্যর্থ', error: error.message });
+  }
+});
+
+
+// POST: কন্টাক্ট তথ্য আপডেট করুন (Upsert)
+app.post('/api/contact-info', async (req, res) => {
+  try {
+    const contactData = req.body;
+    contactData.updatedAt = new Date();
+    await ContactInfoCollection.updateOne({}, { $set: contactData }, { upsert: true });
+    res.status(200).json({ success: true, message: 'যোগাযোগের তথ্য সফলভাবে আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'সংরক্ষণ করতে সমস্যা হয়েছে', error: error.message });
+  }
+});
+
+
+// GET: ভারিফিকেশন পেজের কনফিগারেশন ডাটা
+app.get('/api/verification-page', async (req, res) => {
+  try {
+    const data = await VerificationPageCollection.findOne({});
+    res.send(data || {});
+  } catch (error) {
+    res.status(500).json({ message: 'ডাটা লোড ব্যর্থ', error: error.message });
+  }
+});
+
+// POST: ভারিফিকেশন পেজ কনফিগারেশন আপডেট (Upsert)
+app.post('/api/verification-page', async (req, res) => {
+  try {
+    const configData = req.body;
+    configData.updatedAt = new Date();
+    await VerificationPageCollection.updateOne({}, { $set: configData }, { upsert: true });
+    res.status(200).json({ success: true, message: 'যাচাই পেজের তথ্য আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+// GET: সব গ্যালারি আইটেম
+app.get('/api/gallery', async (req, res) => {
+  try {
+    const items = await GalleryCollection.find({}).toArray();
+    res.status(200).json({ success: true, items });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'গ্যালারি ডাটা আনতে ব্যর্থ', error: error.message });
+  }
+});
+
+// POST: একটি নতুন গ্যালারি আইটেম যোগ করুন
+app.post('/api/gallery', async (req, res) => {
+  try {
+    const { title, category, image, date } = req.body;
+    if (!title || !category || !image) {
+      return res.status(400).json({ success: false, message: 'শিরোনাম, ক্যাটাগরি এবং ছবির URL আবশ্যক' });
+    }
+    const newItem = {
+      title,
+      category,
+      image,
+      date: date || new Date().toLocaleDateString('bn-BD'),
+      createdAt: new Date()
+    };
+    const result = await GalleryCollection.insertOne(newItem);
+    res.status(201).json({ success: true, message: 'গ্যালারি আইটেম যুক্ত হয়েছে', id: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'সংরক্ষণ ব্যর্থ', error: error.message });
+  }
+});
+
+// PUT: একটি গ্যালারি আইটেম আপডেট করুন
+app.put('/api/gallery/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, category, image, date } = req.body;
+    const updateData = { title, category, image, date, updatedAt: new Date() };
+    const result = await GalleryCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'আইটেম পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'আইটেম আপডেট হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+// DELETE: একটি গ্যালারি আইটেম মুছুন
+app.delete('/api/gallery/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await GalleryCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'আইটেম পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'আইটেম মুছে ফেলা হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'মুছতে ব্যর্থ', error: error.message });
+  }
+});
+
+// GET: সব আপডেট (তারিখ অনুযায়ী সাজানো)
+app.get('/api/updates', async (req, res) => {
+  try {
+    const updates = await UpdatesCollection.find({}).sort({ dateField: -1 }).toArray();
+    res.status(200).json({ success: true, updates });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট লোড ব্যর্থ', error: error.message });
+  }
+});
+
+// POST: একটি নতুন আপডেট যোগ করুন
+app.post('/api/updates', async (req, res) => {
+  try {
+    const { title, description, tag, tagColor, date, link } = req.body;
+    if (!title || !description) {
+      return res.status(400).json({ success: false, message: 'শিরোনাম ও বিবরণ আবশ্যক' });
+    }
+    const newUpdate = {
+      title,
+      description,
+      tag: tag || 'সাধারণ নোটিশ',
+      tagColor: tagColor || 'bg-blue-500',
+      date: date || new Date().toLocaleDateString('bn-BD'),
+      link: link || '#',
+      dateField: new Date(),
+      createdAt: new Date()
+    };
+    const result = await UpdatesCollection.insertOne(newUpdate);
+    res.status(201).json({ success: true, message: 'আপডেট যোগ হয়েছে', id: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'যোগ করতে ব্যর্থ', error: error.message });
+  }
+});
+
+// PUT: একটি আপডেট এডিট করুন
+app.put('/api/updates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, tag, tagColor, date, link } = req.body;
+    const updateData = {
+      title, description, tag, tagColor,
+      date: date || new Date().toLocaleDateString('bn-BD'),
+      link: link || '#',
+      updatedAt: new Date()
+    };
+    const result = await UpdatesCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'আপডেট পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'আপডেট পরিবর্তিত হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+// DELETE: একটি আপডেট ডিলিট করুন
+app.delete('/api/updates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await UpdatesCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'আপডেট পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'সফলভাবে মুছে ফেলা হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'মুছতে ব্যর্থ', error: error.message });
+  }
+});
+
+// ক্যাটাগরি অপশন (আপনি ড্যাশবোর্ডে এডিটযোগ্য রাখতে চাইলে আলাদা স্টেট করতে পারেন)
+const galleryCategories = ['উন্নয়ন প্রকল্প', 'স্বাস্থ্যসেবা', 'নাগরিক সেবা', 'অনুষ্ঠান'];
+
+// গ্যালারি ডাটা লোড করা
+const fetchGallery = async () => {
+  try {
+    const res = await axios.get('/api/gallery');
+    if (res.data.success) {
+      setGalleryItems(res.data.items);
+    }
+  } catch (err) {
+    console.error('গ্যালারি লোড ব্যর্থ:', err);
+  }
+};
+
+useEffect(() => {
+  fetchGallery();
+}, []);
+
+const deleteGalleryItem = async (id) => {
+  if (!window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি মুছতে চান?')) return;
+  try {
+    await axios.delete(`/api/gallery/${id}`);
+    setMessage({ text: 'সফলভাবে মুছে ফেলা হয়েছে', isError: false });
+    fetchGallery();
+    if (editingGalleryId === id) {
+      setEditingGalleryId(null);
+      setGalleryForm({ title: '', category: 'উন্নয়ন প্রকল্প', image: '', date: '' });
+    }
+  } catch (err) {
+    setMessage({ text: 'মুছতে ব্যর্থ!', isError: true });
+  }
+};
     // =========================================================================
 
     console.log("MongoDB Connected & All Routes Ready Successfully!");

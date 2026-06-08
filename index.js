@@ -48,11 +48,16 @@ async function run() {
     const ChairmanCollection = db.collection('chairman');
     const ExChairmanCollection = db.collection('ex_chairmans'); // 🌟 সাবেক চেয়ারম্যান কালেকশন
     const CouncillorCollection = db.collection('councillors'); // 🌟 কাউন্সিলর কালেকশন
-    const SecretaryCollection = db.collection('secretary'); // 🌟 নতুন যোগ করা হলো: সচিব কালেকশন
     const ContactInfoCollection = db.collection('contact_info');
     const VerificationPageCollection = db.collection('verification_page');
     const GalleryCollection = db.collection('gallery_items');
 const UpdatesCollection = db.collection('updates');
+const SecretaryCollection = db.collection('secretary');
+const AccountCollection = db.collection('account_info');
+const OtherStaffCollection = db.collection('other_staff');
+
+
+
 
 
 
@@ -481,32 +486,8 @@ const UpdatesCollection = db.collection('updates');
     });
 
 
-    // =========================================================================
-    // 🌟 ইউপি সচিব (SECRETARY) পিওর মঙ্গোডিবি রাউটস (Upsert Pattern)
-    // =========================================================================
-// ১. সচিবের তথ্য গেট করার API
-app.get('/api/secretary', async (req, res) => {
-  try {
-    const result = await SecretaryCollection.findOne({});
-    res.status(200).send(result || {});
-  } catch (error) {
-    res.status(500).json({ message: 'সচিবের তথ্য আনতে ব্যর্থ!' });
-  }
-});
 
-// ২. সচিবের তথ্য আপডেট করার API (ড্যাশবোর্ড থেকে কল করার জন্য)
-app.post('/api/secretary', async (req, res) => {
-  try {
-    const secretaryData = req.body;
-    secretaryData.updatedAt = new Date();
 
-    // upsert: true মানে ডাটা না থাকলে নতুন তৈরি হবে, থাকলে আপডেট হবে
-    await SecretaryCollection.updateOne({}, { $set: secretaryData }, { upsert: true });
-    res.status(200).json({ success: true, message: 'সচিবের প্রোফাইল আপডেট হয়েছে!' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'সংরক্ষণ করতে সমস্যা হয়েছে!' });
-  }
-});
 
 
 // GET: কন্টাক্ট তথ্য পড়ুন (একটি ডকুমেন্ট)
@@ -691,6 +672,78 @@ app.delete('/api/updates/:id', async (req, res) => {
   }
 });
 
+app.get('/api/secretary', async (req, res) => {
+  try {
+    const secretary = await SecretaryCollection.findOne({});
+    res.send(secretary || {});
+  } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+app.post('/api/secretary', async (req, res) => {
+  try {
+    const data = req.body;
+    data.updatedAt = new Date();
+    await SecretaryCollection.updateOne({}, { $set: data }, { upsert: true });
+    res.status(200).json({ success: true, message: 'সচিবের তথ্য আপডেট হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET: একাউন্ট পেজের ডাটা
+app.get('/api/account', async (req, res) => {
+  try {
+    const data = await AccountCollection.findOne({});
+    res.send(data || {});
+  } catch (error) {
+    res.status(500).json({ message: 'একাউন্ট ডাটা লোড ব্যর্থ', error: error.message });
+  }
+});
+
+// POST: একাউন্ট পেজ কনফিগারেশন আপডেট (Upsert)
+app.post('/api/account', async (req, res) => {
+  try {
+    const accountData = req.body;
+    accountData.updatedAt = new Date();
+    await AccountCollection.updateOne({}, { $set: accountData }, { upsert: true });
+    res.status(200).json({ success: true, message: 'একাউন্ট পেজের তথ্য আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+
+// GET all staff
+app.get('/api/other-staff', async (req, res) => {
+  try {
+    const staff = await OtherStaffCollection.find({}).toArray();
+    res.status(200).json({ success: true, staff });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'স্টাফ লোড ব্যর্থ', error: error.message });
+  }
+});
+
+// POST update whole list (sync)
+app.post('/api/other-staff', async (req, res) => {
+  try {
+    const { staffList } = req.body;
+    if (!staffList || !Array.isArray(staffList)) {
+      return res.status(400).json({ success: false, message: 'ভুল ডাটা ফরম্যাট' });
+    }
+    await OtherStaffCollection.deleteMany({});
+    if (staffList.length > 0) {
+      const cleaned = staffList.map(({ id, ...rest }) => ({
+        ...rest,
+        createdAt: new Date()
+      }));
+      await OtherStaffCollection.insertMany(cleaned);
+    }
+    res.status(200).json({ success: true, message: 'স্টাফ তালিকা আপডেট হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'সংরক্ষণ ব্যর্থ', error: error.message });
+  }
+});
+
 // ক্যাটাগরি অপশন (আপনি ড্যাশবোর্ডে এডিটযোগ্য রাখতে চাইলে আলাদা স্টেট করতে পারেন)
 const galleryCategories = ['উন্নয়ন প্রকল্প', 'স্বাস্থ্যসেবা', 'নাগরিক সেবা', 'অনুষ্ঠান'];
 
@@ -706,9 +759,22 @@ const fetchGallery = async () => {
   }
 };
 
-useEffect(() => {
-  fetchGallery();
-}, []);
+const deleteGalleryItem = async (id) => {
+  if (!window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি মুছতে চান?')) return;
+  try {
+    await axios.delete(`/api/gallery/${id}`);
+    setMessage({ text: 'সফলভাবে মুছে ফেলা হয়েছে', isError: false });
+    fetchGallery();
+    if (editingGalleryId === id) {
+      setEditingGalleryId(null);
+      setGalleryForm({ title: '', category: 'উন্নয়ন প্রকল্প', image: '', date: '' });
+    }
+  } catch (err) {
+    setMessage({ text: 'মুছতে ব্যর্থ!', isError: true });
+  }
+};
+
+
 
 const deleteGalleryItem = async (id) => {
   if (!window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি মুছতে চান?')) return;

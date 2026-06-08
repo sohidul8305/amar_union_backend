@@ -475,6 +475,88 @@ async function run() {
       }
     });
 
+
+
+// ====================== API কল ======================
+const fetchCouncillors = async () => {
+  try {
+    const res = await axios.get('/api/councillors');
+    if (res.data.success && res.data.councillors.length) {
+      setCouncillorsList(res.data.councillors);
+    } else {
+      // ডিফল্ট কিছু উদাহরণ ডাটা (আপনি নিজের মতো করে দিতে পারেন)
+      setCouncillorsList([
+        { id: 1, name: 'মোঃ রফিকুল ইসলাম', ward: '১ নং ওয়ার্ড', role: 'ইউপি সদস্য / কাউন্সিলর', phone: '+৮৮০ ১৭১৩-০১_ _ _ _', email: 'ward1@union.gov.bd', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300' },
+        { id: 2, name: 'আব্দুল কুদ্দুস', ward: '২ নং ওয়ার্ড', role: 'ইউপি সদস্য / কাউন্সিলর', phone: '+৮৮০ ১৭১৩-০২_ _ _ _', email: 'ward2@union.gov.bd', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300' },
+        // ... অন্যান্য সদস্য
+      ]);
+    }
+  } catch (err) {
+    console.error('কাউন্সিলর লোড করতে ব্যর্থ:', err);
+  }
+};
+
+useEffect(() => {
+  fetchCouncillors();
+}, []);
+
+const saveAllCouncillors = async () => {
+  setCouncillorLoading(true);
+  try {
+    const payload = councillorsList.map(({ id, ...rest }) => rest); // id বাদ দিয়ে বাকি ডাটা পাঠানো
+    await axios.post('/api/councillors', { councillors: payload });
+    setMessage({ text: 'কাউন্সিলর তালিকা সফলভাবে সংরক্ষিত!', isError: false });
+  } catch (err) {
+    setMessage({ text: 'সংরক্ষণ করতে ব্যর্থ!', isError: true });
+  } finally {
+    setCouncillorLoading(false);
+  }
+};
+
+const handleCouncillorSubmit = (e) => {
+  e.preventDefault();
+  const { name, ward, role, phone, email, image } = councillorForm;
+  if (!name || !ward) {
+    setMessage({ text: 'নাম ও ওয়ার্ড অবশ্যই দিতে হবে', isError: true });
+    return;
+  }
+  if (editingCouncillorId) {
+    // এডিট
+    setCouncillorsList(prev =>
+      prev.map(c => c.id === editingCouncillorId ? { ...c, name, ward, role, phone, email, image } : c)
+    );
+    setEditingCouncillorId(null);
+  } else {
+    // নতুন যোগ
+    const newId = Date.now();
+    setCouncillorsList(prev => [...prev, { id: newId, name, ward, role, phone, email, image }]);
+  }
+  setCouncillorForm({ name: '', ward: '', role: 'ইউপি সদস্য / কাউন্সিলর', phone: '', email: '', image: '' });
+  setMessage({ text: 'তালিকা আপডেট হয়েছে, সংরক্ষণ করতে "তালিকা সংরক্ষণ করুন" বাটনে ক্লিক করুন', isError: false });
+};
+
+const startEditCouncillor = (item) => {
+  setEditingCouncillorId(item.id);
+  setCouncillorForm({
+    name: item.name,
+    ward: item.ward,
+    role: item.role,
+    phone: item.phone,
+    email: item.email,
+    image: item.image || ''
+  });
+};
+
+const deleteCouncillor = (id) => {
+  if (window.confirm('আপনি কি নিশ্চিত যে এই সদস্য মুছতে চান?')) {
+    setCouncillorsList(prev => prev.filter(c => c.id !== id));
+    if (editingCouncillorId === id) {
+      setEditingCouncillorId(null);
+      setCouncillorForm({ name: '', ward: '', role: 'ইউপি সদস্য / কাউন্সিলর', phone: '', email: '', image: '' });
+    }
+  }
+};
+
     // =========================================================================
 
     console.log("MongoDB Connected & All Routes Ready Successfully!");

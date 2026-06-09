@@ -40,7 +40,7 @@ async function run() {
     const AdminCollection = db.collection('admin_users');
     const GlanceCollection = db.collection('glance');
     const StructureCollection = db.collection('structure');
-    
+
     // 🔥 ডায়নামিক হোম পেজ ও পরিচিতির জন্য নতুন কালেকশন সমূহ
     const NoticeCollection = db.collection('notices');
     const ServiceCollection = db.collection('services');
@@ -55,6 +55,10 @@ const UpdatesCollection = db.collection('updates');
 const SecretaryCollection = db.collection('secretary');
 const AccountCollection = db.collection('account_info');
 const OtherStaffCollection = db.collection('other_staff');
+const FooterCollection = db.collection('footer_info');
+const CouncillorsPageConfigCollection = db.collection('councillors_page_config');
+
+
 
 
 
@@ -166,7 +170,7 @@ const OtherStaffCollection = db.collection('other_staff');
         const data = req.body;
         const finalData = { 
           ...data, 
-          email: data.email || data.applicantInfo?.applicantEmail, 
+          email: data.email || data.applicantInfo?.applicantEmail,
           warishId: 'WRS' + Date.now(), 
           status: 'Pending', 
           submittedAt: new Date() 
@@ -744,52 +748,59 @@ app.post('/api/other-staff', async (req, res) => {
   }
 });
 
-// ক্যাটাগরি অপশন (আপনি ড্যাশবোর্ডে এডিটযোগ্য রাখতে চাইলে আলাদা স্টেট করতে পারেন)
-const galleryCategories = ['উন্নয়ন প্রকল্প', 'স্বাস্থ্যসেবা', 'নাগরিক সেবা', 'অনুষ্ঠান'];
-
-// গ্যালারি ডাটা লোড করা
-const fetchGallery = async () => {
+// GET: ফুটার ডাটা
+app.get('/api/footer', async (req, res) => {
   try {
-    const res = await axios.get('/api/gallery');
-    if (res.data.success) {
-      setGalleryItems(res.data.items);
-    }
-  } catch (err) {
-    console.error('গ্যালারি লোড ব্যর্থ:', err);
+    const data = await FooterCollection.findOne({});
+    res.send(data || {});
+  } catch (error) {
+    res.status(500).json({ message: 'ফুটার ডাটা লোড ব্যর্থ', error: error.message });
   }
-};
+});
 
-const deleteGalleryItem = async (id) => {
-  if (!window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি মুছতে চান?')) return;
+// POST: ফুটার ডাটা আপডেট (Upsert)
+app.post('/api/footer', async (req, res) => {
   try {
-    await axios.delete(`/api/gallery/${id}`);
-    setMessage({ text: 'সফলভাবে মুছে ফেলা হয়েছে', isError: false });
-    fetchGallery();
-    if (editingGalleryId === id) {
-      setEditingGalleryId(null);
-      setGalleryForm({ title: '', category: 'উন্নয়ন প্রকল্প', image: '', date: '' });
-    }
-  } catch (err) {
-    setMessage({ text: 'মুছতে ব্যর্থ!', isError: true });
+    const footerData = req.body;
+    footerData.updatedAt = new Date();
+    await FooterCollection.updateOne({}, { $set: footerData }, { upsert: true });
+    res.status(200).json({ success: true, message: 'ফুটার তথ্য আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
   }
-};
+});
 
+// ... সব API রাউট (উপরে অনেক লাইন) ...
 
-
-const deleteGalleryItem = async (id) => {
-  if (!window.confirm('আপনি কি নিশ্চিত যে এই ছবিটি মুছতে চান?')) return;
+// GET: কাউন্সিলর পেজ কনফিগারেশন
+app.get('/api/councillors-page-config', async (req, res) => {
   try {
-    await axios.delete(`/api/gallery/${id}`);
-    setMessage({ text: 'সফলভাবে মুছে ফেলা হয়েছে', isError: false });
-    fetchGallery();
-    if (editingGalleryId === id) {
-      setEditingGalleryId(null);
-      setGalleryForm({ title: '', category: 'উন্নয়ন প্রকল্প', image: '', date: '' });
-    }
-  } catch (err) {
-    setMessage({ text: 'মুছতে ব্যর্থ!', isError: true });
+    const config = await CouncillorsPageConfigCollection.findOne({});
+    res.send(config || {});
+  } catch (error) {
+    res.status(500).json({ message: 'কনফিগ লোড ব্যর্থ', error: error.message });
   }
-};
+});
+
+// POST: কাউন্সিলর পেজ কনফিগারেশন আপডেট (Upsert)
+app.post('/api/councillors-page-config', async (req, res) => {
+  try {
+    const configData = req.body;
+    configData.updatedAt = new Date();
+    await CouncillorsPageConfigCollection.updateOne({}, { $set: configData }, { upsert: true });
+    res.status(200).json({ success: true, message: 'পেজ কনফিগারেশন আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+console.log("MongoDB Connected & All Routes Ready Successfully!");
+
+
+
+
+
+
     // =========================================================================
 
     console.log("MongoDB Connected & All Routes Ready Successfully!");

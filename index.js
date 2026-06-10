@@ -57,6 +57,8 @@ const AccountCollection = db.collection('account_info');
 const OtherStaffCollection = db.collection('other_staff');
 const FooterCollection = db.collection('footer_info');
 const CouncillorsPageConfigCollection = db.collection('councillors_page_config');
+const ProjectCollection = db.collection('projects');
+
 
 
 
@@ -758,14 +760,15 @@ app.get('/api/footer', async (req, res) => {
   }
 });
 
-// POST: ফুটার ডাটা আপডেট (Upsert)
 app.post('/api/footer', async (req, res) => {
   try {
     const footerData = req.body;
+    console.log('Received footer data:', footerData);
     footerData.updatedAt = new Date();
     await FooterCollection.updateOne({}, { $set: footerData }, { upsert: true });
     res.status(200).json({ success: true, message: 'ফুটার তথ্য আপডেট হয়েছে!' });
   } catch (error) {
+    console.error('Footer save error:', error);
     res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
   }
 });
@@ -797,7 +800,68 @@ app.post('/api/councillors-page-config', async (req, res) => {
 console.log("MongoDB Connected & All Routes Ready Successfully!");
 
 
+// GET: সব প্রকল্প তালিকা
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await ProjectCollection.find({}).toArray();
+    res.status(200).json({ success: true, projects });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'প্রকল্প লোড ব্যর্থ', error: error.message });
+  }
+});
 
+// POST: নতুন প্রকল্প যোগ করুন
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { name, budget, status } = req.body;
+    if (!name || !budget) {
+      return res.status(400).json({ success: false, message: 'নাম ও বাজেট আবশ্যক' });
+    }
+    const newProject = {
+      name,
+      budget,
+      status: status || 'প্রক্রিয়াধীন',
+      createdAt: new Date()
+    };
+    const result = await ProjectCollection.insertOne(newProject);
+    res.status(201).json({ success: true, message: 'প্রকল্প যোগ হয়েছে', id: result.insertedId });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'যোগ করতে ব্যর্থ', error: error.message });
+  }
+});
+
+// PUT: একটি প্রকল্প সম্পাদনা করুন
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, budget, status } = req.body;
+    const updateData = { name, budget, status, updatedAt: new Date() };
+    const result = await ProjectCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'প্রকল্প পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'প্রকল্প আপডেট হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'আপডেট ব্যর্থ', error: error.message });
+  }
+});
+
+// DELETE: একটি প্রকল্প মুছুন
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await ProjectCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'প্রকল্প পাওয়া যায়নি' });
+    }
+    res.status(200).json({ success: true, message: 'প্রকল্প মুছে ফেলা হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'মুছতে ব্যর্থ', error: error.message });
+  }
+});
 
 
 

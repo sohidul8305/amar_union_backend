@@ -764,6 +764,10 @@ app.post('/api/footer', async (req, res) => {
   try {
     const footerData = req.body;
     console.log('Received footer data:', footerData);
+    
+    // 🔥 গুরুত্বপূর্ণ: _id ফিল্ডটি মুছে ফেলুন (ইমিউটেবল)
+    delete footerData._id;
+    
     footerData.updatedAt = new Date();
     await FooterCollection.updateOne({}, { $set: footerData }, { upsert: true });
     res.status(200).json({ success: true, message: 'ফুটার তথ্য আপডেট হয়েছে!' });

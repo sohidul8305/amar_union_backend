@@ -331,23 +331,19 @@ const ContactMessageCollection = db.collection('contact_messages');
     });
 
     // ৫. Glance ডাটা সেভ বা আপডেট করার API (Upsert)
-    app.post('/api/glance', async (req, res) => {
-      try {
-        const { 
-          totalPopulation, totalVoters, area, literacyRate, 
-          totalVillages, primarySchools, healthCenters, established 
-        } = req.body;
+app.post('/api/glance', async (req, res) => {
+  try {
+    const glanceData = req.body;
+    delete glanceData._id;               // 🔥 ইমিউটেবল ফিল্ড ডিলিট করুন
+    glanceData.updatedAt = new Date();
+    await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
+    res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-        const glanceData = {
-          totalPopulation, totalVoters, area, literacyRate,
-          totalVillages, primarySchools, healthCenters, established,
-          updatedAt: new Date()
-        };
 
-        await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
-        res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
-      } catch (error) { res.status(500).json({ message: error.message }); }
-    });
 
     // ৬. Glance ডাটা দেখানোর API (GET)
     app.get('/api/glance', async (req, res) => {

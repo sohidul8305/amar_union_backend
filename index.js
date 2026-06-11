@@ -692,6 +692,7 @@ app.get('/api/secretary', async (req, res) => {
 app.post('/api/secretary', async (req, res) => {
   try {
     const data = req.body;
+    delete data._id;           // 🔥 ইমিউটেবল ফিল্ড ডিলিট করুন
     data.updatedAt = new Date();
     await SecretaryCollection.updateOne({}, { $set: data }, { upsert: true });
     res.status(200).json({ success: true, message: 'সচিবের তথ্য আপডেট হয়েছে' });

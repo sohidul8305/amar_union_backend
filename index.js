@@ -58,6 +58,8 @@ const OtherStaffCollection = db.collection('other_staff');
 const FooterCollection = db.collection('footer_info');
 const CouncillorsPageConfigCollection = db.collection('councillors_page_config');
 const ProjectCollection = db.collection('projects');
+const ContactMessageCollection = db.collection('contact_messages');
+
 
 
 
@@ -511,6 +513,7 @@ app.get('/api/contact-info', async (req, res) => {
 app.post('/api/contact-info', async (req, res) => {
   try {
     const contactData = req.body;
+    delete contactData._id;      // 🔥 ইমিউটেবল ফিল্ড ডিলিট করুন
     contactData.updatedAt = new Date();
     await ContactInfoCollection.updateOne({}, { $set: contactData }, { upsert: true });
     res.status(200).json({ success: true, message: 'যোগাযোগের তথ্য সফলভাবে আপডেট হয়েছে!' });
@@ -534,6 +537,7 @@ app.get('/api/verification-page', async (req, res) => {
 app.post('/api/verification-page', async (req, res) => {
   try {
     const configData = req.body;
+    delete configData._id;           // 🔥 ইমিউটেবল ফিল্ড ডিলিট করুন
     configData.updatedAt = new Date();
     await VerificationPageCollection.updateOne({}, { $set: configData }, { upsert: true });
     res.status(200).json({ success: true, message: 'যাচাই পেজের তথ্য আপডেট হয়েছে!' });
@@ -864,6 +868,24 @@ app.delete('/api/projects/:id', async (req, res) => {
     res.status(200).json({ success: true, message: 'প্রকল্প মুছে ফেলা হয়েছে' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'মুছতে ব্যর্থ', error: error.message });
+  }
+});
+
+app.post('/api/contact-message', async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ success: false, message: 'সব তথ্য আবশ্যক' });
+    }
+    const newMessage = {
+      name, email, subject, message,
+      createdAt: new Date(),
+      status: 'unread'
+    };
+    await ContactMessageCollection.insertOne(newMessage);
+    res.status(201).json({ success: true, message: 'বার্তা সফলভাবে পাঠানো হয়েছে' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'বার্তা পাঠাতে ব্যর্থ' });
   }
 });
 

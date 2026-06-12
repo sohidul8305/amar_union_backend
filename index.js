@@ -17,7 +17,7 @@ app.use(cors({
 
 // মঙ্গোডিবি কানেকশন ইউআরআই
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
-const client = new MongoClient(uri, { 
+const client = new MongoClient(uri, {
   serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
 

@@ -5,26 +5,25 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');  
 
-const JWT_SECRET = process.env.JWT_SECRET || 'amar_union_secret_2025';
 const app = express();
 const port = process.env.PORT || 5000;
 
 // গ্লোবাল মিডলওয়্যার সমূহ
 app.use(express.json());
 app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174'], 
-  credentials: true 
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true
 }));
 
 // মঙ্গোডিবি কানেকশন ইউআরআই
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
 const client = new MongoClient(uri, { 
-  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true } 
+  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db('amar_union_db');
 
     // ------------------- সব কালেকশন সমূহ -------------------

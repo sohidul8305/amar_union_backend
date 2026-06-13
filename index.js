@@ -5,26 +5,25 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');  
 
-const JWT_SECRET = process.env.JWT_SECRET || 'amar_union_secret_2025';
 const app = express();
 const port = process.env.PORT || 5000;
-
+const JWT_SECRET = process.env.JWT_SECRET; // এটি এখন .env থেকে ডাটা পাবে
 // গ্লোবাল মিডলওয়্যার সমূহ
 app.use(express.json());
 app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174'], 
-  credentials: true 
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true
 }));
 
 // মঙ্গোডিবি কানেকশন ইউআরআই
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
-const client = new MongoClient(uri, { 
-  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true } 
+const client = new MongoClient(uri, {
+  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db('amar_union_db');
 
     // ------------------- সব কালেকশন সমূহ -------------------
@@ -234,22 +233,37 @@ const ContactMessageCollection = db.collection('contact_messages');
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
 
-    // ------------------- অ্যাডমিন লগইন -------------------
-    app.post('/api/admin/login', async (req, res) => {
-      const { email, password } = req.body;
-      const admin = await AdminCollection.findOne({ email });
-      if (!admin) return res.status(401).json({ message: 'ইমেইল বা পাসওয়ার্ড ভুল' });
-      
-      const isMatch = await bcrypt.compare(password, admin.password);
-      if (!isMatch) return res.status(401).json({ message: 'ইমেইল বা পাসওয়ার্ড ভুল' });
-      
-      const token = jwt.sign(
-        { id: admin._id, email: admin.email, role: admin.role },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-      res.json({ token, admin: { id: admin._id, email: admin.email, role: admin.role } });
-    });
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // ডাটাবেস চেক
+    const admin = await AdminCollection.findOne({ email: email });
+    
+    if (!admin) {
+      return res.status(401).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+    }
+
+    // পাসওয়ার্ড চেক (bcrypt না থাকলে সরাসরি তুলনা)
+    if (password === admin.password) {
+      return res.json({ success: true, token: 'fake-token-123' });
+    } else {
+      return res.status(401).json({ success: false, message: 'পাসওয়ার্ড ভুল' });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+    // টোকেন তৈরি
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    
+    res.json({ success: true, token, admin: { email: admin.email } });
+  } catch (error) {
+    res.status(500).json({ message: 'সার্ভার এরর, আবার চেষ্টা করুন' });
+  }
+});
 
     // ------------------- ৮. ট্রেড লাইসেন্স -------------------
     app.post('/api/trade-license', async (req, res) => {
@@ -331,23 +345,19 @@ const ContactMessageCollection = db.collection('contact_messages');
     });
 
     // ৫. Glance ডাটা সেভ বা আপডেট করার API (Upsert)
-    app.post('/api/glance', async (req, res) => {
-      try {
-        const { 
-          totalPopulation, totalVoters, area, literacyRate, 
-          totalVillages, primarySchools, healthCenters, established 
-        } = req.body;
+app.post('/api/glance', async (req, res) => {
+  try {
+    const glanceData = req.body;
+    delete glanceData._id;               // 🔥 ইমিউটেবল ফিল্ড ডিলিট করুন
+    glanceData.updatedAt = new Date();
+    await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
+    res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-        const glanceData = {
-          totalPopulation, totalVoters, area, literacyRate,
-          totalVillages, primarySchools, healthCenters, established,
-          updatedAt: new Date()
-        };
 
-        await GlanceCollection.updateOne({}, { $set: glanceData }, { upsert: true });
-        res.status(200).json({ message: 'এক নজরে ইউনিয়নের তথ্য সফলভাবে আপডেট হয়েছে!' });
-      } catch (error) { res.status(500).json({ message: error.message }); }
-    });
 
     // ৬. Glance ডাটা দেখানোর API (GET)
     app.get('/api/glance', async (req, res) => {
@@ -901,3 +911,5 @@ run().catch(console.dir);
 
 app.get('/', (req, res) => res.send('Amar Union Server Running'));
 app.listen(port, () => console.log(`Server running on port ${port}`));
+// একদম শেষে যোগ করুন
+module.exports = app;

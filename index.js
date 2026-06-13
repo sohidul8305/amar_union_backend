@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET; // এটি এখন .env থেকে ডাটা পাবে
+
 // গ্লোবাল মিডলওয়্যার সমূহ
 app.use(express.json());
 app.use(cors({ 
@@ -233,37 +233,14 @@ const ContactMessageCollection = db.collection('contact_messages');
       } catch (error) { res.status(500).send({ success: false, message: error.message }); }
     });
 
-app.post('/api/admin/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    // ডাটাবেস চেক
-    const admin = await AdminCollection.findOne({ email: email });
-    
-    if (!admin) {
-      return res.status(401).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
-    }
-
-    // পাসওয়ার্ড চেক (bcrypt না থাকলে সরাসরি তুলনা)
-    if (password === admin.password) {
-      return res.json({ success: true, token: 'fake-token-123' });
-    } else {
-      return res.status(401).json({ success: false, message: 'পাসওয়ার্ড ভুল' });
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-    // টোকেন তৈরি
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    
-    res.json({ success: true, token, admin: { email: admin.email } });
-  } catch (error) {
-    res.status(500).json({ message: 'সার্ভার এরর, আবার চেষ্টা করুন' });
-  }
-});
+    // ---------- লগইন API (হার্ডকোডেড, কোনো টোকেন নাই) ----------
+    app.post('/api/admin/login', (req, res) => {
+      const { email, password } = req.body;
+      if (email === 'admin@amarunion.gov.bd' && password === 'admin123') {
+        return res.json({ success: true });
+      }
+      return res.status(401).json({ success: false, message: 'ইমেইল বা পাসওয়ার্ড ভুল' });
+    });
 
     // ------------------- ৮. ট্রেড লাইসেন্স -------------------
     app.post('/api/trade-license', async (req, res) => {

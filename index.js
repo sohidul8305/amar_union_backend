@@ -23,7 +23,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // await client.connect();
+    await client.connect();
     const db = client.db('amar_union_db');
 
     // ------------------- সব কালেকশন সমূহ -------------------
@@ -171,8 +171,8 @@ const ContactMessageCollection = db.collection('contact_messages');
     app.post('/api/warish', async (req, res) => {
       try {
         const data = req.body;
-        const finalData = { 
-          ...data, 
+        const finalData = {
+          ...data,
           email: data.email || data.applicantInfo?.applicantEmail,
           warishId: 'WRS' + Date.now(), 
           status: 'Pending', 
@@ -876,6 +876,17 @@ app.post('/api/contact-message', async (req, res) => {
     res.status(500).json({ success: false, message: 'বার্তা পাঠাতে ব্যর্থ' });
   }
 });
+
+
+app.get('/test-db', async (req, res) => {
+  try {
+    await client.db().command({ ping: 1 });
+    res.send("✅ MongoDB সংযোগ সফল!");
+  } catch (error) {
+    res.status(500).send("❌ MongoDB সংযোগ ব্যর্থ: " + error.message);
+  }
+});
+
 
 
 

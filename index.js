@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 5000;
 
+
 // গ্লোবাল মিডলওয়্যার সমূহ
 app.use(express.json());
 app.use(cors({ 
@@ -20,6 +21,17 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, {
   serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
+// হেল্পার ফাংশন: সিরিয়াল জেনারেট (ইউনিয়ন + বছর ভিত্তিক কাউন্টার)
+async function getNextSerial(unionCode, year) {
+  const counterId = `cert_serial_${year}_${unionCode}`;
+  const counters = db.collection('counters');
+  const result = await counters.findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+  return result.value.seq.toString().padStart(5, '0');
+}
 
 async function run() {
   try {
@@ -58,6 +70,7 @@ const FooterCollection = db.collection('footer_info');
 const CouncillorsPageConfigCollection = db.collection('councillors_page_config');
 const ProjectCollection = db.collection('projects');
 const ContactMessageCollection = db.collection('contact_messages');
+  const countersCollection = db.collection('counters');
 
 
 
@@ -887,6 +900,75 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+// PUT রাউট (এখানে আপনার দেওয়া পুরো app.put কোড বসবে)
+app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
+  try {
+    const { collectionName, docId } = req.params;
+    const { status } = req.body;
+    const collection = db.collection(collectionName);
+    const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
+    if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
+
+    let updateFields = { status };
+    if (status === 'Approved') {
+      const upazilaCode = appDoc.upazilaCode || '1234';
+      const unionCode = appDoc.unionCode || '5678';
+      const year = new Date().getFullYear().toString();
+      const counterKey = `cert_counter_${year}_${unionCode}`;
+      let serial = await getNextSerial(counterKey);
+      const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
+      updateFields.certificateSerial = serial;
+      updateFields.certificateNo = certificateNo;
+    }
+
+    await collection.updateOne({ _id: new ObjectId(docId) }, { $set: updateFields });
+    res.json({ success: true, certificateNo: updateFields.certificateNo });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
+  }
+});
+
+
+// PUT রাউট (এডমিন অনুমোদন)
+app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
+  try {
+    const { collectionName, docId } = req.params;
+    const { status } = req.body;
+    const collection = db.collection(collectionName);
+
+    const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
+    if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
+
+    let updateFields = { status };
+
+    if (status === 'Approved') {
+      // উপজেলা ও ইউনিয়ন কোড – এখানে আপনার ডাটা সোর্স অনুযায়ী সেট করুন
+      // ধরে নিচ্ছি appDoc এর ভিতরে upazilaCode ও unionCode আছে (আবেদন ফর্ম থেকে এসেছে)
+      const upazilaCode = appDoc.upazilaCode || '1234';   // আপনার রিয়েল কোড দিন
+      const unionCode = appDoc.unionCode || '5678';
+      const year = new Date().getFullYear().toString();
+
+      const serial = await getNextSerial(unionCode, year);
+      const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
+
+      updateFields.certificateSerial = serial;
+      updateFields.certificateNo = certificateNo;
+      updateFields.upazilaCode = upazilaCode;
+      updateFields.unionCode = unionCode;
+    }
+
+    await collection.updateOne(
+      { _id: new ObjectId(docId) },
+      { $set: updateFields }
+    );
+
+    res.json({ success: true, certificateNo: updateFields.certificateNo });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
+  }
+});
 
 
 

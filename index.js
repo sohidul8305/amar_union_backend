@@ -76,13 +76,22 @@ const OpenSpaceLicenseCollection = db.collection('open_space_licenses');
 const CharacterCertificateCollection = db.collection('character_certificates');
 const UnmarriedCertificateCollection = db.collection('unmarried_certificates');
 const NationalityCollection = db.collection('nationality_certificates');
-
-
-
-
-
-
-
+const RemarriageCertificateCollection = db.collection('remarriage_certificates');
+const AnnualIncomeCertificateCollection = db.collection('annual_income_certificates');
+const SameNameCertificateCollection = db.collection('same_name_certificates');
+const DisabilityCertificateCollection = db.collection('disability_certificates');
+const ReligionCertificateCollection = db.collection('religion_certificates');
+const PermissionCertificateCollection = db.collection('permission_certificates');
+const PassportCertificateCollection = db.collection('passport_certificates');
+const VoterTransferCollection = db.collection('voter_transfer_certificates');
+const RiverErosionCollection = db.collection('river_erosion_certificates');
+const NewVoterCollection = db.collection('new_voter_certificates');
+const MarriedCertificateCollection = db.collection('married_certificates');
+const VoterUpdateCollection = db.collection('voter_update_certificates');
+const GuardianConsentCollection = db.collection('guardian_consent_certificates');
+const NonCitizenCertificateCollection = db.collection('non_citizen_certificates');
+const NocCertificateCollection = db.collection('noc_certificates');
+const VoterVerificationCollection = db.collection('voter_verification_certificates');
 
 
 
@@ -113,6 +122,22 @@ const NationalityCollection = db.collection('nationality_certificates');
   ...(await CharacterCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'চারিত্রিক সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
   ...(await UnmarriedCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'অবিবাহিত সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
   ...(await NationalityCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'জাতীয়তা সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await RemarriageCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'পুনঃ বিবাহ না হওয়ার সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await AnnualIncomeCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'বার্ষিক আয়ের প্রত্যয়ন', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await SameNameCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'একই নামের প্রত্যয়ন', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await DisabilityCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'প্রতিবন্ধী সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await ReligionCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'ধর্মীয় সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await PermissionCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'অনুমতি পত্র', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await PassportCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'পাসপোর্ট সুপারিশপত্র', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await VoterTransferCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'ভোটার আইডি স্থানান্তর', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await RiverErosionCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'নদী ভাঙনের সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await NewVoterCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'নতুন ভোটার সুপারিশ', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await MarriedCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'বিবাহিত সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await VoterUpdateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'ভোটার তথ্য সংশোধন', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await GuardianConsentCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'অভিভাবকের সম্মতিপত্র', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await NonCitizenCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'নাগরিকত্ব সনদপত্র', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await NocCertificateCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'অনাপত্তি সনদপত্র (NOC)', date: a.submittedAt, status: a.status || 'Pending' })),
+...(await VoterVerificationCollection.find(query).toArray()).map(a => ({ id: a.certificateId, type: 'ভোটার যাচাইকরণ', date: a.submittedAt, status: a.status || 'Pending' })),
         ];
         allApps.sort((a, b) => new Date(b.date) - new Date(a.date));
         res.send(allApps);
@@ -137,9 +162,25 @@ const NationalityCollection = db.collection('nationality_certificates');
   { name: 'character_certificates', coll: CharacterCertificateCollection, label: 'চারিত্রিক সনদ' },
   { name: 'unmarried_certificates', coll: UnmarriedCertificateCollection, label: 'অবিবাহিত সনদ' },
   { name: 'nationality_certificates', coll: NationalityCollection, label: 'জাতীয়তা সনদ' },
+  { name: 'remarriage_certificates', coll: RemarriageCertificateCollection, label: 'পুনঃ বিবাহ না হওয়ার সনদ' }
+  ,
+  { name: 'annual_income_certificates', coll: AnnualIncomeCertificateCollection, label: 'বার্ষিক আয়ের প্রত্যয়ন' },
+  { name: 'same_name_certificates', coll: SameNameCertificateCollection, label: 'একই নামের প্রত্যয়ন' },
+  { name: 'disability_certificates', coll: DisabilityCertificateCollection, label: 'প্রতিবন্ধী সনদ' },
+  { name: 'religion_certificates', coll: ReligionCertificateCollection, label: 'ধর্মীয় সনদ' },
+  { name: 'permission_certificates', coll: PermissionCertificateCollection, label: 'অনুমতি পত্র' },
+  { name: 'passport_certificates', coll: PassportCertificateCollection, label: 'পাসপোর্ট সুপারিশপত্র' },
+{ name: 'voter_transfer_certificates', coll: VoterTransferCollection, label: 'ভোটার আইডি স্থানান্তর' },
+{ name: 'river_erosion_certificates', coll: RiverErosionCollection, label: 'নদী ভাঙনের সনদ' },
+{ name: 'new_voter_certificates', coll: NewVoterCollection, label: 'নতুন ভোটার সুপারিশ' },
+{ name: 'married_certificates', coll: MarriedCertificateCollection, label: 'বিবাহিত সনদ' },
+{ name: 'voter_update_certificates', coll: VoterUpdateCollection, label: 'ভোটার তথ্য সংশোধন' },
+{ name: 'guardian_consent_certificates', coll: GuardianConsentCollection, label: 'অভিভাবকের সম্মতিপত্র' },
+{ name: 'non_citizen_certificates', coll: NonCitizenCertificateCollection, label: 'নাগরিকত্ব সনদপত্র' },
+{ name: 'noc_certificates', coll: NocCertificateCollection, label: 'অনাপত্তি সনদপত্র (NOC)' },
+{ name: 'voter_verification_certificates', coll: VoterVerificationCollection, label: 'ভোটার যাচাইকরণ' },
 
-        ];
-
+];
         let allApplications = [];
         for (const col of collections) {
           const docs = await col.coll.find({}).toArray();
@@ -169,18 +210,39 @@ const NationalityCollection = db.collection('nationality_certificates');
         const { status } = req.body;
 
         let collection;
-        switch (collectionName) {
-          case 'family_certificates': collection = FamilyCertificateCollection; break;
-          case 'warish': collection = WarishCollection; break;
-          case 'citizenship_certificates': collection = CitizenshipCollection; break;
-          case 'successor_certificates': collection = SuccessorCollection; break;
-          case 'power_of_attorney': collection = PowerOfAttorneyCollection; break;
-          case 'death_certificates': collection = DeathCertificateCollection; break;
-          case 'landless_certificates': collection = LandlessCertificateCollection; break;
-          case 'trade_licenses': collection = TradeLicenseCollection; break;
-          case 'premises': collection = PremisesCollection; break;
-          default: return res.status(400).json({ message: 'অবৈধ কালেকশন' });
-        }
+switch (collectionName) {
+  case 'family_certificates': collection = FamilyCertificateCollection; break;
+  case 'warish': collection = WarishCollection; break;
+  case 'citizenship_certificates': collection = CitizenshipCollection; break;
+  case 'successor_certificates': collection = SuccessorCollection; break;
+  case 'power_of_attorney': collection = PowerOfAttorneyCollection; break;
+  case 'death_certificates': collection = DeathCertificateCollection; break;
+  case 'landless_certificates': collection = LandlessCertificateCollection; break;
+  case 'trade_licenses': collection = TradeLicenseCollection; break;
+  case 'premises': collection = PremisesCollection; break;
+  case 'trade_renewal': collection = TradeRenewalCollection; break;
+  case 'open_space_licenses': collection = OpenSpaceLicenseCollection; break;
+  case 'character_certificates': collection = CharacterCertificateCollection; break;
+  case 'unmarried_certificates': collection = UnmarriedCertificateCollection; break;
+  case 'nationality_certificates': collection = NationalityCollection; break;
+  case 'remarriage_certificates': collection = RemarriageCertificateCollection; break;
+  case 'annual_income_certificates': collection = AnnualIncomeCertificateCollection; break;
+  case 'same_name_certificates': collection = SameNameCertificateCollection; break;
+  case 'disability_certificates': collection = DisabilityCertificateCollection; break;
+  case 'religion_certificates': collection = ReligionCertificateCollection; break;
+  case 'permission_certificates': collection = PermissionCertificateCollection; break;
+  case 'passport_certificates': collection = PassportCertificateCollection; break;
+  case 'voter_transfer_certificates': collection = VoterTransferCollection; break;
+  case 'river_erosion_certificates': collection = RiverErosionCollection; break;
+  case 'new_voter_certificates': collection = NewVoterCollection; break;
+  case 'married_certificates': collection = MarriedCertificateCollection; break;
+case 'voter_update_certificates': collection = VoterUpdateCollection; break;
+case 'guardian_consent_certificates': collection = GuardianConsentCollection; break;
+case 'non_citizen_certificates': collection = NonCitizenCertificateCollection; break;
+case 'noc_certificates': collection = NocCertificateCollection; break;
+case 'voter_verification_certificates': collection = VoterVerificationCollection; break;
+  default: return res.status(400).json({ message: 'অবৈধ কালেকশন' });
+}
 
         const result = await collection.updateOne(
           { _id: new ObjectId(docId) },
@@ -1127,6 +1189,357 @@ app.post('/api/nationality-certificate', async (req, res) => {
   }
 });
 
+// ------------------- পুনঃ বিবাহ না হওয়ার সনদ -------------------
+app.post('/api/remarriage-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'RMD' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await RemarriageCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Remarriage Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- বার্ষিক আয়ের প্রত্যয়ন -------------------
+app.post('/api/annual-income-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'AIN' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await AnnualIncomeCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Annual Income Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- একই নামের প্রত্যয়ন -------------------
+app.post('/api/same-name-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'SNM' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await SameNameCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Same Name Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+// ------------------- প্রতিবন্ধী সনদ -------------------
+app.post('/api/disability-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'DSB' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await DisabilityCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Disability Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- ধর্মীয় সনদ -------------------
+app.post('/api/religion-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'REL' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await ReligionCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Religion Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- অনুমতি পত্র -------------------
+app.post('/api/permission-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'PRM' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await PermissionCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Permission Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- পাসপোর্ট সুপারিশপত্র -------------------
+app.post('/api/passport-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'PPS' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await PassportCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Passport Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- ভোটার আইডি স্থানান্তর আবেদন -------------------
+app.post('/api/voter-transfer', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'VTR' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await VoterTransferCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Voter Transfer Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- নদী ভাঙনের সনদ -------------------
+app.post('/api/river-erosion-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'RVR' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await RiverErosionCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('River Erosion Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- নতুন ভোটার সুপারিশ -------------------
+app.post('/api/new-voter-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'NVR' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await NewVoterCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('New Voter Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- বিবাহিত সনদ -------------------
+app.post('/api/married-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'MRD' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await MarriedCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Married Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/voter-update-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'VUP' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await VoterUpdateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Voter Update Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+
+// ------------------- অভিভাবকের সম্মতিপত্র -------------------
+app.post('/api/guardian-consent-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'GCN' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await GuardianConsentCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Guardian Consent Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+
+// ------------------- নাগরিকত্ব সনদপত্র (অ-নাগরিক নয়) -------------------
+app.post('/api/non-citizen-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'NCT' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await NonCitizenCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Non-Citizen Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- অনাপত্তি সনদপত্র (NOC) -------------------
+app.post('/api/noc-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'NOC' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await NocCertificateCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('NOC Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- ভোটার যাচাইকরণ -------------------
+app.post('/api/voter-verification-certificate', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      certificateId: 'VVR' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await VoterVerificationCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      certificateId: finalData.certificateId
+    });
+  } catch (error) {
+    console.error('Voter Verification Certificate Error:', error);
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
 
     // =========================================================================
 

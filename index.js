@@ -970,6 +970,22 @@ app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
   }
 });
 
+// ১. নবায়নের আবেদন সেভ করার API
+app.post('/api/trade-renewal', async (req, res) => {
+    try {
+        const applicationData = req.body;
+        // ডেটাবেসে ইনসার্ট করুন (আপনার MongoDB বা অন্য DB অনুযায়ী)
+        const result = await db.collection('trade_renewals').insertOne({
+            ...applicationData,
+            status: 'Pending', // ডিফল্ট স্ট্যাটাস
+            date: new Date()
+        });
+        res.status(201).send(result);
+    } catch (error) {
+        res.status(500).send({ message: "আবেদন জমা দিতে সমস্যা হয়েছে" });
+    }
+});
+
 
 
     // =========================================================================

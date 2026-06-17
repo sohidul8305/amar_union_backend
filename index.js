@@ -71,6 +71,8 @@ const CouncillorsPageConfigCollection = db.collection('councillors_page_config')
 const ProjectCollection = db.collection('projects');
 const ContactMessageCollection = db.collection('contact_messages');
   const countersCollection = db.collection('counters');
+  const TradeRenewalCollection = db.collection('trade_renewal');
+const OpenSpaceLicenseCollection = db.collection('open_space_licenses');
 
 
 
@@ -96,7 +98,14 @@ const ContactMessageCollection = db.collection('contact_messages');
           ...(await DeathCertificateCollection.find(query).toArray()).map(a => ({ id: a.deathCertId, type: 'মৃত্যু সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await LandlessCertificateCollection.find(query).toArray()).map(a => ({ id: a.landlessId, type: 'ভূমিহীন সনদ', date: a.submittedAt, status: a.status || 'Pending' })),
           ...(await TradeLicenseCollection.find(query).toArray()).map(a => ({ id: a.applicationId, type: 'ট্রেড লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' })),
-          ...(await PremisesCollection.find(query).toArray()).map(a => ({ id: a.premisesId, type: 'প্রাঙ্গণ লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' }))
+          ...(await PremisesCollection.find(query).toArray()).map(a => ({ id: a.premisesId, type: 'প্রাঙ্গণ লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' })),
+
+            // ... আগের সব লাইন ...
+  ...(await TradeLicenseCollection.find(query).toArray()).map(a => ({ id: a.applicationId, type: 'ট্রেড লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' })),
+  // ⬇️ নিচের দুটি লাইন যোগ করুন
+  ...(await TradeRenewalCollection.find(query).toArray()).map(a => ({ id: a.tradeRenewalId, type: 'ট্রেড লাইসেন্স নবায়ন', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await PremisesCollection.find(query).toArray()).map(a => ({ id: a.premisesId, type: 'প্রাঙ্গণ লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' })),
+  ...(await OpenSpaceLicenseCollection.find(query).toArray()).map(a => ({ id: a.licenseId, type: 'খোলা জায়গার লাইসেন্স', date: a.submittedAt, status: a.status || 'Pending' }))
         ];
         allApps.sort((a, b) => new Date(b.date) - new Date(a.date));
         res.send(allApps);
@@ -115,7 +124,9 @@ const ContactMessageCollection = db.collection('contact_messages');
           { name: 'death_certificates', coll: DeathCertificateCollection, label: 'মৃত্যু সনদ' },
           { name: 'landless_certificates', coll: LandlessCertificateCollection, label: 'ভূমিহীন সনদ' },
           { name: 'trade_licenses', coll: TradeLicenseCollection, label: 'ট্রেড লাইসেন্স' },
-          { name: 'premises', coll: PremisesCollection, label: 'প্রাঙ্গণ লাইসেন্স' }
+          { name: 'premises', coll: PremisesCollection, label: 'প্রাঙ্গণ লাইসেন্স' },
+            { name: 'trade_renewal', coll: TradeRenewalCollection, label: 'ট্রেড লাইসেন্স নবায়ন' },
+  { name: 'open_space_licenses', coll: OpenSpaceLicenseCollection, label: 'খোলা জায়গার লাইসেন্স' }
         ];
 
         let allApplications = [];
@@ -986,6 +997,56 @@ app.post('/api/trade-renewal', async (req, res) => {
     }
 });
 
+
+// ------------------- ট্রেড লাইসেন্স নবায়ন -------------------
+app.post('/api/trade-renewal', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      tradeRenewalId: 'TRN' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await TradeRenewalCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      tradeRenewalId: finalData.tradeRenewalId
+    });
+  } catch (error) {
+    console.error('Trade Renewal Error:', error);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// ------------------- খোলা জায়গার লাইসেন্স -------------------
+app.post('/api/open-space-license', async (req, res) => {
+  try {
+    const data = req.body;
+    const finalData = {
+      ...data,
+      licenseId: 'OSL' + Date.now(),
+      status: 'Pending',
+      submittedAt: new Date()
+    };
+    const result = await OpenSpaceLicenseCollection.insertOne(finalData);
+    res.status(201).send({
+      success: true,
+      result,
+      licenseId: finalData.licenseId
+    });
+  } catch (error) {
+    console.error('Open Space License Error:', error);
+    res.status(500).send({
+      success: false,
+      message: error.message
+    });
+  }
+});
 
 
     // =========================================================================

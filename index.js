@@ -21,17 +21,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, {
   serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
-// হেল্পার ফাংশন: সিরিয়াল জেনারেট (ইউনিয়ন + বছর ভিত্তিক কাউন্টার)
-async function getNextSerial(unionCode, year) {
-  const counterId = `cert_serial_${year}_${unionCode}`;
-  const counters = db.collection('counters');
-  const result = await counters.findOneAndUpdate(
-    { _id: counterId },
-    { $inc: { seq: 1 } },
-    { upsert: true, returnDocument: 'after' }
-  );
-  return result.value.seq.toString().padStart(5, '0');
-}
+
 
 async function run() {
   try {
@@ -59,6 +49,9 @@ async function run() {
     const ChairmanCollection = db.collection('chairman');
     const ExChairmanCollection = db.collection('ex_chairmans'); // 🌟 সাবেক চেয়ারম্যান কালেকশন
     const CouncillorCollection = db.collection('councillors'); // 🌟 কাউন্সিলর কালেকশন
+    // কাউন্টার কালেকশন
+
+
     const ContactInfoCollection = db.collection('contact_info');
     const VerificationPageCollection = db.collection('verification_page');
     const GalleryCollection = db.collection('gallery_items');
@@ -70,8 +63,8 @@ const FooterCollection = db.collection('footer_info');
 const CouncillorsPageConfigCollection = db.collection('councillors_page_config');
 const ProjectCollection = db.collection('projects');
 const ContactMessageCollection = db.collection('contact_messages');
-  const countersCollection = db.collection('counters');
-  const TradeRenewalCollection = db.collection('trade_renewal');
+const countersCollection = db.collection('counters');
+const TradeRenewalCollection = db.collection('trade_renewal');
 const OpenSpaceLicenseCollection = db.collection('open_space_licenses');
 const CharacterCertificateCollection = db.collection('character_certificates');
 const UnmarriedCertificateCollection = db.collection('unmarried_certificates');
@@ -93,7 +86,16 @@ const NonCitizenCertificateCollection = db.collection('non_citizen_certificates'
 const NocCertificateCollection = db.collection('noc_certificates');
 const VoterVerificationCollection = db.collection('voter_verification_certificates');
 
-
+// সিরিয়াল জেনারেট (বছর + ইউনিয়ন কোড অনুযায়ী)
+async function getCertificateSerial(year, unionCode) {
+  const counterId = `cert_serial_${year}_${unionCode}`;
+  const result = await countersCollection.findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+  return result.value.seq.toString().padStart(5, '0');
+}
 
 
 
@@ -1015,60 +1017,60 @@ app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
 
 
 // PUT রাউট (এডমিন অনুমোদন)
-app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
-  try {
-    const { collectionName, docId } = req.params;
-    const { status } = req.body;
-    const collection = db.collection(collectionName);
+// app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
+//   try {
+//     const { collectionName, docId } = req.params;
+//     const { status } = req.body;
+//     const collection = db.collection(collectionName);
 
-    const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
-    if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
+//     const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
+//     if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
 
-    let updateFields = { status };
+//     let updateFields = { status };
 
-    if (status === 'Approved') {
-      // উপজেলা ও ইউনিয়ন কোড – এখানে আপনার ডাটা সোর্স অনুযায়ী সেট করুন
-      // ধরে নিচ্ছি appDoc এর ভিতরে upazilaCode ও unionCode আছে (আবেদন ফর্ম থেকে এসেছে)
-      const upazilaCode = appDoc.upazilaCode || '1234';   // আপনার রিয়েল কোড দিন
-      const unionCode = appDoc.unionCode || '5678';
-      const year = new Date().getFullYear().toString();
+//     if (status === 'Approved') {
+//       // উপজেলা ও ইউনিয়ন কোড – এখানে আপনার ডাটা সোর্স অনুযায়ী সেট করুন
+//       // ধরে নিচ্ছি appDoc এর ভিতরে upazilaCode ও unionCode আছে (আবেদন ফর্ম থেকে এসেছে)
+//       const upazilaCode = appDoc.upazilaCode || '1234';   // আপনার রিয়েল কোড দিন
+//       const unionCode = appDoc.unionCode || '5678';
+//       const year = new Date().getFullYear().toString();
 
-      const serial = await getNextSerial(unionCode, year);
-      const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
+//       const serial = await getNextSerial(unionCode, year);
+//       const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
 
-      updateFields.certificateSerial = serial;
-      updateFields.certificateNo = certificateNo;
-      updateFields.upazilaCode = upazilaCode;
-      updateFields.unionCode = unionCode;
-    }
+//       updateFields.certificateSerial = serial;
+//       updateFields.certificateNo = certificateNo;
+//       updateFields.upazilaCode = upazilaCode;
+//       updateFields.unionCode = unionCode;
+//     }
 
-    await collection.updateOne(
-      { _id: new ObjectId(docId) },
-      { $set: updateFields }
-    );
+//     await collection.updateOne(
+//       { _id: new ObjectId(docId) },
+//       { $set: updateFields }
+//     );
 
-    res.json({ success: true, certificateNo: updateFields.certificateNo });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
-  }
-});
+//     res.json({ success: true, certificateNo: updateFields.certificateNo });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
+//   }
+// });
 
 // ১. নবায়নের আবেদন সেভ করার API
-app.post('/api/trade-renewal', async (req, res) => {
-    try {
-        const applicationData = req.body;
-        // ডেটাবেসে ইনসার্ট করুন (আপনার MongoDB বা অন্য DB অনুযায়ী)
-        const result = await db.collection('trade_renewals').insertOne({
-            ...applicationData,
-            status: 'Pending', // ডিফল্ট স্ট্যাটাস
-            date: new Date()
-        });
-        res.status(201).send(result);
-    } catch (error) {
-        res.status(500).send({ message: "আবেদন জমা দিতে সমস্যা হয়েছে" });
-    }
-});
+// app.post('/api/trade-renewal', async (req, res) => {
+//     try {
+//         const applicationData = req.body;
+//         // ডেটাবেসে ইনসার্ট করুন (আপনার MongoDB বা অন্য DB অনুযায়ী)
+//         const result = await db.collection('trade_renewals').insertOne({
+//             ...applicationData,
+//             status: 'Pending', // ডিফল্ট স্ট্যাটাস
+//             date: new Date()
+//         });
+//         res.status(201).send(result);
+//     } catch (error) {
+//         res.status(500).send({ message: "আবেদন জমা দিতে সমস্যা হয়েছে" });
+//     }
+// });
 
 
 // ------------------- ট্রেড লাইসেন্স নবায়ন -------------------
@@ -1538,6 +1540,100 @@ app.post('/api/voter-verification-certificate', async (req, res) => {
   } catch (error) {
     console.error('Voter Verification Certificate Error:', error);
     res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ------------------- সনদপত্র জেনারেট API -------------------
+app.get('/api/certificate/:collectionName/:docId', async (req, res) => {
+  try {
+    console.log('📄 Certificate request received:', req.params);
+    const { collectionName, docId } = req.params;
+
+    // 1. Validate ObjectId
+    if (!ObjectId.isValid(docId)) {
+      console.error('❌ Invalid ObjectId:', docId);
+      return res.status(400).json({ error: 'অবৈধ আবেদন আইডি' });
+    }
+
+    const collection = db.collection(collectionName);
+    console.log(`🔍 Searching in collection: ${collectionName} with ID: ${docId}`);
+
+    const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
+    if (!appDoc) {
+      console.error('❌ Document not found for ID:', docId);
+      return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
+    }
+    console.log('✅ Application found:', appDoc._id);
+
+    // 2. Union info
+    const unionInfo = {
+      name: '১৬ নং মোহলপুর ইউনিয়ন পরিষদ',
+      address: 'মোহলপুর, সিলিয়ার, কুড়িগ্রাম',
+      website: 'https://mohanpunup.amarunion.com.bd',
+      email: 'feromito@gmail.com',
+      mobile: '০১৩১৮৩৭৭৯৩৩',
+      defaultUpazilaCode: '1234',
+      defaultUnionCode: '5678'
+    };
+
+    // 3. Certificate number generation
+    let certificateNo = appDoc.certificateNo;
+    if (!certificateNo) {
+      const year = new Date().getFullYear().toString();
+      const upazilaCode = appDoc.upazilaCode || unionInfo.defaultUpazilaCode;
+      const unionCode = appDoc.unionCode || unionInfo.defaultUnionCode;
+      
+      console.log(`🔄 Generating serial for year ${year}, union ${unionCode}`);
+      try {
+        const serial = await getCertificateSerial(year, unionCode);
+        certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
+        console.log(`✅ Serial generated: ${serial}, full number: ${certificateNo}`);
+      } catch (serialErr) {
+        console.error('❌ Serial generation failed:', serialErr);
+        // Fallback: use timestamp
+        certificateNo = `${year}${upazilaCode}${unionCode}${Date.now().toString().slice(-5)}`;
+        console.log(`⚠️ Using fallback certificate number: ${certificateNo}`);
+      }
+
+      // Save the certificate number
+      try {
+        await collection.updateOne(
+          { _id: new ObjectId(docId) },
+          { $set: { certificateNo, certificateSerial: serial || 'fallback', certificateYear: year } }
+        );
+        console.log('✅ Certificate number saved to database');
+      } catch (updateErr) {
+        console.error('❌ Failed to save certificate number:', updateErr);
+        // We still want to send the response, so don't throw.
+      }
+    } else {
+      console.log(`✅ Using existing certificate number: ${certificateNo}`);
+    }
+
+    // 4. Send response
+    res.json({
+      success: true,
+      application: appDoc,
+      certificateNo,
+      unionInfo
+    });
+  } catch (error) {
+    console.error('❌ Certificate route error (top-level):', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
+app.post('/api/union-settings', async (req, res) => {
+  try {
+    const data = req.body;
+    await db.collection('union_settings').updateOne(
+      {},
+      { $set: data, updatedAt: new Date() },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

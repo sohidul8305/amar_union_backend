@@ -89,12 +89,21 @@ const VoterVerificationCollection = db.collection('voter_verification_certificat
 // সিরিয়াল জেনারেট (বছর + ইউনিয়ন কোড অনুযায়ী)
 async function getCertificateSerial(year, unionCode) {
   const counterId = `cert_serial_${year}_${unionCode}`;
+  
   const result = await countersCollection.findOneAndUpdate(
     { _id: counterId },
     { $inc: { seq: 1 } },
     { upsert: true, returnDocument: 'after' }
   );
-  return result.value.seq.toString().padStart(5, '0');
+
+  // নতুন ড্রাইভার ভার্সনে result সরাসরি ডকুমেন্ট রিটার্ন করে, অথবা result.value তে থাকে
+  const doc = result.value || result; 
+
+  if (!doc || typeof doc.seq === 'undefined') {
+    throw new Error("Counter sequence could not be generated");
+  }
+
+  return doc.seq.toString().padStart(5, '0');
 }
 
 
@@ -256,6 +265,27 @@ case 'voter_verification_certificates': collection = VoterVerificationCollection
       } catch (error) { res.status(500).json({ message: 'আপডেট ব্যর্থ', error: error.message }); }
     });
 
+
+    // পারিবারিক সনদ ডাটাবেস থেকে আনার জন্য GET API
+app.get('/api/family-certificate', async (req, res) => {
+  try {
+    const result = await FamilyCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
+// ভূমিহীন সনদ ডাটাবেস থেকে আনার জন্য GET API
+app.get('/api/landless-certificate', async (req, res) => {
+  try {
+    const result = await LandlessCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
+
     // ------------------- ১. পারিবারিক সনদ -------------------
     app.post('/api/family-certificate', async (req, res) => {
       try {
@@ -274,7 +304,7 @@ case 'voter_verification_certificates': collection = VoterVerificationCollection
           ...data,
           email: data.email || data.applicantInfo?.applicantEmail,
           warishId: 'WRS' + Date.now(), 
-          status: 'Pending', 
+          status: 'Pending',
           submittedAt: new Date() 
         };
         const result = await WarishCollection.insertOne(finalData);
@@ -986,91 +1016,78 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-// PUT রাউট (এখানে আপনার দেওয়া পুরো app.put কোড বসবে)
-app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
-  try {
-    const { collectionName, docId } = req.params;
-    const { status } = req.body;
-    const collection = db.collection(collectionName);
-    const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
-    if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
-
-    let updateFields = { status };
-    if (status === 'Approved') {
-      const upazilaCode = appDoc.upazilaCode || '1234';
-      const unionCode = appDoc.unionCode || '5678';
-      const year = new Date().getFullYear().toString();
-      const counterKey = `cert_counter_${year}_${unionCode}`;
-      let serial = await getNextSerial(counterKey);
-      const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
-      updateFields.certificateSerial = serial;
-      updateFields.certificateNo = certificateNo;
-    }
-
-    await collection.updateOne({ _id: new ObjectId(docId) }, { $set: updateFields });
-    res.json({ success: true, certificateNo: updateFields.certificateNo });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
-  }
-});
-
-
-// PUT রাউট (এডমিন অনুমোদন)
+// // ✅ সঠিক একক PUT রুট (ডুপ্লিকেটটি মুছে এইটি ব্যবহার করুন)
 // app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {
 //   try {
 //     const { collectionName, docId } = req.params;
 //     const { status } = req.body;
-//     const collection = db.collection(collectionName);
 
-//     const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
-//     if (!appDoc) return res.status(404).json({ error: 'আবেদন পাওয়া যায়নি' });
-
-//     let updateFields = { status };
-
-//     if (status === 'Approved') {
-//       // উপজেলা ও ইউনিয়ন কোড – এখানে আপনার ডাটা সোর্স অনুযায়ী সেট করুন
-//       // ধরে নিচ্ছি appDoc এর ভিতরে upazilaCode ও unionCode আছে (আবেদন ফর্ম থেকে এসেছে)
-//       const upazilaCode = appDoc.upazilaCode || '1234';   // আপনার রিয়েল কোড দিন
-//       const unionCode = appDoc.unionCode || '5678';
-//       const year = new Date().getFullYear().toString();
-
-//       const serial = await getNextSerial(unionCode, year);
-//       const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
-
-//       updateFields.certificateSerial = serial;
-//       updateFields.certificateNo = certificateNo;
-//       updateFields.upazilaCode = upazilaCode;
-//       updateFields.unionCode = unionCode;
+//     let collection;
+//     switch (collectionName) {
+//       case 'family_certificates': collection = FamilyCertificateCollection; break;
+//       case 'warish': collection = WarishCollection; break;
+//       case 'citizenship_certificates': collection = CitizenshipCollection; break;
+//       case 'successor_certificates': collection = SuccessorCollection; break;
+//       case 'power_of_attorney': collection = PowerOfAttorneyCollection; break;
+//       case 'death_certificates': collection = DeathCertificateCollection; break;
+//       case 'landless_certificates': collection = LandlessCertificateCollection; break;
+//       case 'trade_licenses': collection = TradeLicenseCollection; break;
+//       case 'premises': collection = PremisesCollection; break;
+//       case 'trade_renewal': collection = TradeRenewalCollection; break;
+//       case 'open_space_licenses': collection = OpenSpaceLicenseCollection; break;
+//       case 'character_certificates': collection = CharacterCertificateCollection; break;
+//       case 'unmarried_certificates': collection = UnmarriedCertificateCollection; break;
+//       case 'nationality_certificates': collection = NationalityCollection; break;
+//       case 'remarriage_certificates': collection = RemarriageCertificateCollection; break;
+//       case 'annual_income_certificates': collection = AnnualIncomeCertificateCollection; break;
+//       case 'same_name_certificates': collection = SameNameCertificateCollection; break;
+//       case 'disability_certificates': collection = DisabilityCertificateCollection; break;
+//       case 'religion_certificates': collection = ReligionCertificateCollection; break;
+//       case 'permission_certificates': collection = PermissionCertificateCollection; break;
+//       case 'passport_certificates': collection = PassportCertificateCollection; break;
+//       case 'voter_transfer_certificates': collection = VoterTransferCollection; break;
+//       case 'river_erosion_certificates': collection = RiverErosionCollection; break;
+//       case 'new_voter_certificates': collection = NewVoterCollection; break;
+//       case 'married_certificates': collection = MarriedCertificateCollection; break;
+//       case 'voter_update_certificates': collection = VoterUpdateCollection; break;
+//       case 'guardian_consent_certificates': collection = GuardianConsentCollection; break;
+//       case 'non_citizen_certificates': collection = NonCitizenCertificateCollection; break;
+//       case 'noc_certificates': collection = NocCertificateCollection; break;
+//       case 'voter_verification_certificates': collection = VoterVerificationCollection; break;
+//       default: return res.status(400).json({ message: 'অবৈধ কালেকশন' });
 //     }
 
-//     await collection.updateOne(
-//       { _id: new ObjectId(docId) },
-//       { $set: updateFields }
-//     );
+//     // আবেদনটি আগে খুঁজে বের করুন
+//     const appDoc = await collection.findOne({ _id: new ObjectId(docId) });
+//     if (!appDoc) return res.status(404).json({ message: 'আবেদন পাওয়া যায়নি' });
 
-//     res.json({ success: true, certificateNo: updateFields.certificateNo });
+//     let updateFields = { status: status, updatedAt: new Date() };
+
+//     // ✅ স্ট্যাটাস 'Approved' হলে সনদ নম্বর জেনারেট করুন (সঠিক ফাংশন ব্যবহার করে)
+//     if (status === 'Approved') {
+//       const upazilaCode = appDoc.upazilaCode || '1234';
+//       const unionCode = appDoc.unionCode || '5678';
+//       const year = new Date().getFullYear().toString();
+      
+//       // আপনার সঠিক getCertificateSerial ফাংশন কল করা হচ্ছে
+//       const serial = await getCertificateSerial(year, unionCode);
+//       const certificateNo = `${year}${upazilaCode}${unionCode}${serial}`;
+      
+//       updateFields.certificateSerial = serial;
+//       updateFields.certificateNo = certificateNo;
+//     }
+
+//     // ডাটাবেস আপডেট করুন
+//     await collection.updateOne({ _id: new ObjectId(docId) }, { $set: updateFields });
+
+//     res.json({ success: true, message: `আবেদন ${status === 'Approved' ? 'অনুমোদিত' : 'প্রত্যাখ্যাত'} হয়েছে`, certificateNo: updateFields.certificateNo });
 //   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: 'স্ট্যাটাস আপডেট ব্যর্থ' });
+//     console.error('❌ Update Status Error:', error);
+//     res.status(500).json({ message: 'স্ট্যাটাস আপডেট ব্যর্থ', error: error.message });
 //   }
 // });
 
-// ১. নবায়নের আবেদন সেভ করার API
-// app.post('/api/trade-renewal', async (req, res) => {
-//     try {
-//         const applicationData = req.body;
-//         // ডেটাবেসে ইনসার্ট করুন (আপনার MongoDB বা অন্য DB অনুযায়ী)
-//         const result = await db.collection('trade_renewals').insertOne({
-//             ...applicationData,
-//             status: 'Pending', // ডিফল্ট স্ট্যাটাস
-//             date: new Date()
-//         });
-//         res.status(201).send(result);
-//     } catch (error) {
-//         res.status(500).send({ message: "আবেদন জমা দিতে সমস্যা হয়েছে" });
-//     }
-// });
+
 
 
 // ------------------- ট্রেড লাইসেন্স নবায়ন -------------------
@@ -1543,6 +1560,262 @@ app.post('/api/voter-verification-certificate', async (req, res) => {
   }
 });
 
+// ========================================================================
+// ✅ মিসিং GET API সমূহ (ব্রাউজারে ডাটা দেখার জন্য যুক্ত করা হলো)
+// ========================================================================
+
+// ১. ওয়ারিশ সনদ GET
+app.get('/api/warish', async (req, res) => {
+  try {
+    const result = await WarishCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২. নাগরিকত্ব সনদ GET
+app.get('/api/citizenship-certificate', async (req, res) => {
+  try {
+    const result = await CitizenshipCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৩. উত্তরাধিকারী সনদ GET
+app.get('/api/successor-certificate', async (req, res) => {
+  try {
+    const result = await SuccessorCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৪. পাওয়ার অফ অ্যাটর্নি GET
+app.get('/api/power-of-attorney', async (req, res) => {
+  try {
+    const result = await PowerOfAttorneyCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৫. মৃত্যু সনদ GET
+app.get('/api/death-certificate', async (req, res) => {
+  try {
+    const result = await DeathCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৬. ট্রেড লাইসেন্স GET
+app.get('/api/trade-license', async (req, res) => {
+  try {
+    const result = await TradeLicenseCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৭. প্রাঙ্গণ লাইসেন্স GET
+app.get('/api/premises', async (req, res) => {
+  try {
+    const result = await PremisesCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৮. ট্রেড লাইসেন্স নবায়ন GET
+app.get('/api/trade-renewal', async (req, res) => {
+  try {
+    const result = await TradeRenewalCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৯. খোলা জায়গার লাইসেন্স GET
+app.get('/api/open-space-license', async (req, res) => {
+  try {
+    const result = await OpenSpaceLicenseCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১০. চারিত্রিক সনদ GET
+app.get('/api/character-certificate', async (req, res) => {
+  try {
+    const result = await CharacterCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১১. অবিবাহিত সনদ GET
+app.get('/api/unmarried-certificate', async (req, res) => {
+  try {
+    const result = await UnmarriedCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১২. জাতীয়তা সনদ GET
+app.get('/api/nationality-certificate', async (req, res) => {
+  try {
+    const result = await NationalityCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৩. পুনঃ বিবাহ না হওয়ার সনদ GET
+app.get('/api/remarriage-certificate', async (req, res) => {
+  try {
+    const result = await RemarriageCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৪. বার্ষিক আয়ের প্রত্যয়ন GET
+app.get('/api/annual-income-certificate', async (req, res) => {
+  try {
+    const result = await AnnualIncomeCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৫. একই নামের প্রত্যয়ন GET
+app.get('/api/same-name-certificate', async (req, res) => {
+  try {
+    const result = await SameNameCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৬. প্রতিবন্ধী সনদ GET
+app.get('/api/disability-certificate', async (req, res) => {
+  try {
+    const result = await DisabilityCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৭. ধর্মীয় সনদ GET
+app.get('/api/religion-certificate', async (req, res) => {
+  try {
+    const result = await ReligionCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৮. অনুমতি পত্র GET
+app.get('/api/permission-certificate', async (req, res) => {
+  try {
+    const result = await PermissionCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ১৯. পাসপোর্ট সুপারিশপত্র GET
+app.get('/api/passport-certificate', async (req, res) => {
+  try {
+    const result = await PassportCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২০. ভোটার আইডি স্থানান্তর GET
+app.get('/api/voter-transfer', async (req, res) => {
+  try {
+    const result = await VoterTransferCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২১. নদী ভাঙনের সনদ GET
+app.get('/api/river-erosion-certificate', async (req, res) => {
+  try {
+    const result = await RiverErosionCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২২. নতুন ভোটার সুপারিশ GET
+app.get('/api/new-voter-certificate', async (req, res) => {
+  try {
+    const result = await NewVoterCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৩. বিবাহিত সনদ GET
+app.get('/api/married-certificate', async (req, res) => {
+  try {
+    const result = await MarriedCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৪. ভোটার তথ্য সংশোধন GET
+app.get('/api/voter-update-certificate', async (req, res) => {
+  try {
+    const result = await VoterUpdateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৫. অভিভাবকের সম্মতিপত্র GET
+app.get('/api/guardian-consent-certificate', async (req, res) => {
+  try {
+    const result = await GuardianConsentCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৬. নাগরিকত্ব সনদপত্র GET
+app.get('/api/non-citizen-certificate', async (req, res) => {
+  try {
+    const result = await NonCitizenCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৭. অনাপত্তি সনদপত্র (NOC) GET
+app.get('/api/noc-certificate', async (req, res) => {
+  try {
+    const result = await NocCertificateCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ২৮. ভোটার যাচাইকরণ GET
+app.get('/api/voter-verification-certificate', async (req, res) => {
+  try {
+    const result = await VoterVerificationCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ------------------------------------------------------------------------
+// 🟢 ওয়েবসাইট ড্যাশবোর্ড ও কনফিগারেশনের জন্য মিসিং GET API সমূহ
+// ------------------------------------------------------------------------
+
+// ২৯. নোটিশ GET (ফ্রন্টএন্ডে দেখানোর জন্য)
+app.get('/api/notices', async (req, res) => {
+  try {
+    const result = await NoticeCollection.find({}).sort({ createdAt: -1 }).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৩০. নাগরিক সেবা GET
+app.get('/api/services', async (req, res) => {
+  try {
+    const result = await ServiceCollection.find({}).toArray();
+    res.send(result);
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
+// ৩১. ইউনিয়ন সেটিংস GET
+app.get('/api/union-settings', async (req, res) => {
+  try {
+    const result = await db.collection('union_settings').findOne({});
+    res.send(result || {});
+  } catch (error) { res.status(500).send({ success: false, message: error.message }); }
+});
+
 // ------------------- সনদপত্র জেনারেট API -------------------
 app.get('/api/certificate/:collectionName/:docId', async (req, res) => {
   try {
@@ -1568,7 +1841,7 @@ app.get('/api/certificate/:collectionName/:docId', async (req, res) => {
     // 2. Union info
     const unionInfo = {
       name: '১৬ নং মোহলপুর ইউনিয়ন পরিষদ',
-      address: 'মোহলপুর, সিলিয়ার, কুড়িগ্রাম',
+      address: 'মোহলপুর, দেবীদ্বার,কুমিল্লা ',
       website: 'https://mohanpunup.amarunion.com.bd',
       email: 'feromito@gmail.com',
       mobile: '০১৩১৮৩৭৭৯৩৩',

@@ -22,17 +22,21 @@ app.use((req, res, next) => {
 });
 
 // ২. এরপর cors মিডলওয়্যার ব্যবহার করুন
+const cors = require('cors');
+
+// CORS কনফিগারেশন
 app.use(cors({
   origin: [
     'https://starlit-chaja-d1cea5.netlify.app', 
     'https://joyful-gelato-9f4522.netlify.app'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
-app.options('*', cors());
 
+// app.options('*', cors());  <-- এই লাইনটি পুরোপুরি ডিলিট করে দিন
+app.use(express.json());
+app.all('*', cors()); // অথবা শুধু এই লাইনটি রাখুন, এটি সব রিকোয়েস্ট হ্যান্ডেল করবে
 app.use(express.json());
 
 // মঙ্গোডিবি কানেকশন ইউআরআই

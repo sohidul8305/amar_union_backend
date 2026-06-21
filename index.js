@@ -14,7 +14,7 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   res.header("Access-Control-Allow-Credentials", "true");
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -23,7 +23,8 @@ app.use((req, res, next) => {
 
 // ২. এরপর cors মিডলওয়্যার ব্যবহার করুন
 app.use(cors({
-  origin: ['https://starlit-chaja-d1cea5.netlify.app', 'http://localhost:5173', 'http://localhost:5174'],
+  origin: '*', // এটি যেকোনো ডোমেইন থেকে রিকোয়েস্ট গ্রহণ করবে
+  origin: ['https://joyful-gelato-9f4522.netlify.app', 'http://localhost:5173', 'http://localhost:5174'],
   credentials: true
 }));
 

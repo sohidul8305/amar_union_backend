@@ -1921,5 +1921,4 @@ run().catch(console.dir);
 
 app.get('/', (req, res) => res.send('Amar Union Server Running'));
 app.listen(port, () => console.log(`Server running on port ${port}`));
-// একদম শেষে যোগ করুন
 module.exports = app;

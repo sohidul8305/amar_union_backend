@@ -9,12 +9,14 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // আপনার বর্তমান কোডে এটি পরিবর্তন করুন
-app.use(cors({ 
+app.use(cors({
   origin: [
     'http://localhost:5173', 
     'http://localhost:5174',
     'https://starlit-chaja-d1cea5.netlify.app/' // এখানে আপনার নেটলিফাইয়ের লিঙ্কটি দিন
+
   ],
+
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]

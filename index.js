@@ -8,12 +8,16 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 5000;
 
-
-// গ্লোবাল মিডলওয়্যার সমূহ
-app.use(express.json());
+// আপনার বর্তমান কোডে এটি পরিবর্তন করুন
 app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:5174',
+    'https://starlit-chaja-d1cea5.netlify.app/' // এখানে আপনার নেটলিফাইয়ের লিঙ্কটি দিন
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // মঙ্গোডিবি কানেকশন ইউআরআই
@@ -1007,14 +1011,7 @@ app.post('/api/contact-message', async (req, res) => {
 });
 
 
-app.get('/test-db', async (req, res) => {
-  try {
-    await client.db().command({ ping: 1 });
-    res.send("✅ MongoDB সংযোগ সফল!");
-  } catch (error) {
-    res.status(500).send("❌ MongoDB সংযোগ ব্যর্থ: " + error.message);
-  }
-});
+
 
 // // ✅ সঠিক একক PUT রুট (ডুপ্লিকেটটি মুছে এইটি ব্যবহার করুন)
 // app.put('/api/admin/application/:collectionName/:docId', async (req, res) => {

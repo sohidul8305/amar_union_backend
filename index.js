@@ -23,10 +23,15 @@ app.use((req, res, next) => {
 
 // ২. এরপর cors মিডলওয়্যার ব্যবহার করুন
 app.use(cors({
-  origin: '*', // এটি যেকোনো ডোমেইন থেকে রিকোয়েস্ট গ্রহণ করবে
-  origin: ['https://joyful-gelato-9f4522.netlify.app', 'http://localhost:5173', 'http://localhost:5174'],
-  credentials: true
+  origin: [
+    'https://starlit-chaja-d1cea5.netlify.app', 
+    'https://joyful-gelato-9f4522.netlify.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+app.options('*', cors());
 
 app.use(express.json());
 

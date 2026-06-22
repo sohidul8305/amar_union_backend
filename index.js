@@ -23,15 +23,17 @@ app.use((req, res, next) => {
 
 
 
-// CORS কনফিগারেশন
-app.use(cors({
-  origin: [
-    'https://starlit-chaja-d1cea5.netlify.app', 
-    'https://joyful-gelato-9f4522.netlify.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
+// এই পুরো ব্লকটি মুছে ফেলুন
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://starlit-chaja-d1cea5.netlify.app");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // app.options('*', cors());  <-- এই লাইনটি পুরোপুরি ডিলিট করে দিন
 app.use(express.json());

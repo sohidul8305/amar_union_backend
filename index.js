@@ -21,8 +21,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ২. এরপর cors মিডলওয়্যার ব্যবহার করুন
-const cors = require('cors');
+
 
 // CORS কনফিগারেশন
 app.use(cors({
@@ -36,8 +35,6 @@ app.use(cors({
 
 // app.options('*', cors());  <-- এই লাইনটি পুরোপুরি ডিলিট করে দিন
 app.use(express.json());
-app.all('*', cors()); // অথবা শুধু এই লাইনটি রাখুন, এটি সব রিকোয়েস্ট হ্যান্ডেল করবে
-app.use(express.json());
 
 // মঙ্গোডিবি কানেকশন ইউআরআই
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hz6ypdj.mongodb.net/?appName=Cluster0`;
@@ -48,7 +45,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // await client.connect();
     const db = client.db('amar_union_db');
 
     // ------------------- সব কালেকশন সমূহ -------------------
@@ -1936,5 +1932,4 @@ app.post('/api/union-settings', async (req, res) => {
 run().catch(console.dir);
 
 app.get('/', (req, res) => res.send('Amar Union Server Running'));
-app.listen(port, () => console.log(`Server running on port ${port}`));
 module.exports = app;

@@ -22,8 +22,6 @@ app.use((req, res, next) => {
 });
 
 
-
-// এই পুরো ব্লকটি মুছে ফেলুন
 app.use(cors({
   origin: ['https://joyful-gelato-9f4522.netlify.app'],
   credentials: true,
